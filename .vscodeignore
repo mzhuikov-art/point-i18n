@@ -1,0 +1,16 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/*.map
+**/*.ts
+!out/**/*.js
+node_modules/**
+.pnpm/**
+.pnpm-store/**
+pnpm-lock.yaml
+pnpm-workspace.yaml
+i18n-ally-src/**

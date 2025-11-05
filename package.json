@@ -1,0 +1,88 @@
+{
+  "name": "point-i18n",
+  "displayName": "Point I18n",
+  "publisher": "your-publisher",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.87.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "i18nRemote",
+          "title": "Point I18n",
+          "icon": "$(globe)"
+        }
+      ]
+    },
+    "views": {
+      "i18nRemote": [
+        {
+          "type": "webview",
+          "id": "i18nRemote.sidebar",
+          "name": "Управление",
+          "contextualTitle": "Point I18n"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "i18nRemote.openLogin",
+        "title": "Point I18n: Quick Login"
+      },
+      {
+        "command": "i18nRemote.fetchNow",
+        "title": "Point I18n: Fetch locales now"
+      },
+      {
+        "command": "i18nRemote.toggleDecorations",
+        "title": "Point I18n: Toggle inline translations"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "i18nRemote.toggleDecorations",
+        "key": "cmd+shift+i",
+        "mac": "cmd+shift+i",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Point I18n",
+      "properties": {
+        "i18nRemote.locale": {
+          "type": "string",
+          "default": "ru",
+          "description": "Язык для отображения переводов"
+        },
+        "i18nRemote.projectKey": {
+          "type": "string",
+          "default": "point-frontend",
+          "description": "Ключ проекта для локализации"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/node-fetch": "^2.6.2",
+    "@types/vscode": "^1.87.0",
+    "@vscode/vsce": "^3.6.2",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}
