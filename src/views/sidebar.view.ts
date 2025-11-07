@@ -112,11 +112,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 await this.decorationProvider.updateDecorations(vscode.window.activeTextEditor);
             }
         } catch (error: any) {
+            const errorMessage = error.message || 'Ошибка авторизации';
             this.sendMessage({ 
                 command: 'showMessage', 
-                text: `❌ Ошибка: ${error.message}`, 
+                text: `❌ ${errorMessage}`, 
                 type: 'error' 
             });
+            vscode.window.showErrorMessage(`Ошибка авторизации: ${errorMessage}`);
         }
     }
 
