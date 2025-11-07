@@ -1,8 +1,8 @@
 {
   "name": "point-i18n",
   "displayName": "Point I18n",
-  "publisher": "your-publisher",
-  "version": "1.0.0",
+  "publisher": "maksim-zhuikov",
+  "version": "1.1.0",
   "engines": {
     "vscode": "^1.87.0"
   },
@@ -42,6 +42,10 @@
       {
         "command": "i18nRemote.toggleDecorations",
         "title": "Point I18n: Toggle inline translations"
+      },
+      {
+        "command": "i18nRemote.openTranslatedForSearch",
+        "title": "Point I18n: Open translated file for search"
       }
     ],
     "keybindings": [
@@ -64,6 +68,11 @@
           "type": "string",
           "default": "point-frontend",
           "description": "Ключ проекта для локализации"
+        },
+        "i18nRemote.searchPath": {
+          "type": "string",
+          "default": "src",
+          "description": "Путь для поиска переводов"
         }
       }
     }
