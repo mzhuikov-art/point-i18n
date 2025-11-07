@@ -73,6 +73,20 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             case 'updateKey':
                 await this.handleUpdateKey(message.key, message.translations);
                 break;
+            case 'searchTranslatedText':
+                await this.handleSearchTranslatedText(message.query, message.searchPath);
+                // Сохраняем путь поиска
+                if (message.searchPath) {
+                    await vscode.workspace.getConfiguration('i18nRemote').update(
+                        'searchPath',
+                        message.searchPath,
+                        vscode.ConfigurationTarget.Global
+                    );
+                }
+                break;
+            case 'openFileAtLine':
+                await this.handleOpenFileAtLine(message.filePath, message.line);
+                break;
         }
     }
 
@@ -147,6 +161,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private getProjectKey(): string {
         return vscode.workspace.getConfiguration('i18nRemote').get<string>('projectKey') || 'point-frontend';
+    }
+
+    private getLocaleFromConfig(): string {
+        return vscode.workspace.getConfiguration('i18nRemote').get<string>('locale') || 'ru';
     }
 
     private async handleChangeLocale(locale: string): Promise<void> {
@@ -320,9 +338,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         const locale = vscode.workspace.getConfiguration('i18nRemote').get<string>('locale') || 'ru';
         const projectKey = this.getProjectKey();
+        const searchPath = vscode.workspace.getConfiguration('i18nRemote').get<string>('searchPath') || 'src';
+        
         this.sendMessage({
             command: 'updateLocale',
             locale
+        });
+        
+        this.sendMessage({
+            command: 'updateSearchPath',
+            searchPath
         });
         
         // Загружаем проекты и отправляем текущий проект
@@ -462,6 +487,208 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
         
         return stats;
+    }
+
+    private async handleSearchTranslatedText(query: string, searchPath?: string): Promise<void> {
+        if (!query || !query.trim()) {
+            this.sendMessage({
+                command: 'translatedSearchResults',
+                results: []
+            });
+            return;
+        }
+
+        const token = await this.storageService.getToken();
+        if (!token) {
+            this.sendMessage({
+                command: 'translatedSearchResults',
+                results: []
+            });
+            return;
+        }
+
+        const locale = this.getLocaleFromConfig();
+        
+        // Загружаем локали если их еще нет
+        if (!this.cacheService.has(locale)) {
+            try {
+                const projectKey = this.getProjectKey();
+                const locales = await this.apiService.fetchLocales(token, locale, projectKey);
+                this.cacheService.set(locale, locales);
+            } catch (err) {
+                console.error('Failed to fetch locales:', err);
+                this.sendMessage({
+                    command: 'translatedSearchResults',
+                    results: []
+                });
+                return;
+            }
+        }
+
+        const queryLower = query.toLowerCase().trim();
+        const results: Array<{
+            filePath: string;
+            line: number;
+            key: string;
+            translation: string;
+            preview: string;
+        }> = [];
+
+        try {
+            // Шаг 1: Находим все ключи в кеше, переводы которых содержат искомый текст
+            const matchingKeys = new Set<string>();
+            const localeData = this.cacheService.get(locale);
+            
+            if (localeData) {
+                for (const [key, translation] of Object.entries(localeData)) {
+                    if (translation && translation.toLowerCase().includes(queryLower)) {
+                        matchingKeys.add(key);
+                    }
+                }
+            }
+
+            if (matchingKeys.size === 0) {
+                this.sendMessage({
+                    command: 'translatedSearchResults',
+                    results: []
+                });
+                return;
+            }
+
+            // Шаг 2: Определяем путь для поиска (по умолчанию src)
+            const searchPathNormalized = (searchPath || 'src').trim();
+            const searchPattern = searchPathNormalized 
+                ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
+                : '**/*.{js,ts,jsx,tsx,vue,html}';
+            
+            // Ищем по файлам в указанной директории
+            // Увеличиваем лимит и исключаем больше ненужных директорий
+            const files = await vscode.workspace.findFiles(
+                searchPattern,
+                '**/{node_modules,dist,build,.git,.next,.nuxt,.output}/**',
+                5000
+            );
+
+            // Шаг 3: Ищем все ключи i18n в файлах и проверяем, есть ли они в списке подходящих
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            const batchSize = 20;
+            
+            // Используем тот же паттерн, что и в DecorationProvider для консистентности
+            const i18nPattern = /\b(?:\$?t|i18n\.t)\s*\(\s*(['"`])([^'"`]+)\1\s*\)/g;
+            
+            for (let i = 0; i < files.length; i += batchSize) {
+                const batch = files.slice(i, i + batchSize);
+                
+                const batchResults = await Promise.all(
+                    batch.map(async (fileUri) => {
+                        try {
+                            // Используем readFile вместо openTextDocument для ускорения
+                            const fileData = await vscode.workspace.fs.readFile(fileUri);
+                            const text = Buffer.from(fileData).toString('utf-8');
+                            const lines = text.split('\n');
+                            
+                            const fileResults: Array<{
+                                filePath: string;
+                                line: number;
+                                key: string;
+                                translation: string;
+                                preview: string;
+                            }> = [];
+                            
+                            // Ищем все ключи i18n в файле
+                            let match: RegExpExecArray | null;
+                            while ((match = i18nPattern.exec(text)) !== null) {
+                                const key = match[2];
+                                
+                                // Проверяем, есть ли этот ключ в списке подходящих
+                                if (matchingKeys.has(key)) {
+                                    const translation = this.cacheService.getTranslation(locale, key) || '';
+                                    
+                                    // Находим номер строки более эффективно
+                                    const matchIndex = match.index;
+                                    const lineNumber = text.substring(0, matchIndex).split('\n').length - 1;
+                                    const lineText = lines[lineNumber] || '';
+                                    
+                                    // Получаем превью строки (обрезаем если слишком длинная)
+                                    let preview = lineText.trim();
+                                    if (preview.length > 80) {
+                                        preview = preview.substring(0, 77) + '...';
+                                    }
+                                    
+                                    // Получаем относительный путь
+                                    const filePath = workspaceFolder 
+                                        ? vscode.workspace.asRelativePath(fileUri)
+                                        : fileUri.fsPath;
+                                    
+                                    fileResults.push({
+                                        filePath,
+                                        line: lineNumber,
+                                        key,
+                                        translation,
+                                        preview
+                                    });
+                                }
+                            }
+                            
+                            // Сбрасываем lastIndex для следующего файла
+                            i18nPattern.lastIndex = 0;
+                            
+                            return fileResults;
+                        } catch (error) {
+                            // Пропускаем файлы, которые не удалось прочитать
+                            console.error(`Error reading file ${fileUri.fsPath}:`, error);
+                            return [];
+                        }
+                    })
+                );
+                
+                // Добавляем результаты из батча
+                for (const fileResults of batchResults) {
+                    results.push(...fileResults);
+                }
+            }
+
+            // Сортируем результаты по файлу и строке
+            results.sort((a, b) => {
+                if (a.filePath !== b.filePath) {
+                    return a.filePath.localeCompare(b.filePath);
+                }
+                return a.line - b.line;
+            });
+
+            this.sendMessage({
+                command: 'translatedSearchResults',
+                results
+            });
+        } catch (error) {
+            console.error('Search error:', error);
+            this.sendMessage({
+                command: 'translatedSearchResults',
+                results: []
+            });
+        }
+    }
+
+    private async handleOpenFileAtLine(filePath: string, line: number): Promise<void> {
+        try {
+            // Находим файл по относительному пути
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('Не найден workspace');
+                return;
+            }
+
+            const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+            const document = await vscode.workspace.openTextDocument(fileUri);
+            const editor = await vscode.window.showTextDocument(document);
+            
+            // Переходим на нужную строку
+            const position = new vscode.Position(line, 0);
+            editor.selection = new vscode.Selection(position, position);
+            editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Ошибка при открытии файла: ${error.message}`);
+        }
     }
 
     private sendMessage(message: any): void {
