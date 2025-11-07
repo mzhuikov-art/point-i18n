@@ -19,6 +19,11 @@ export interface AuthResponse {
     scope: string;
 }
 
+export interface AuthErrorResponse {
+    error: string;
+    error_description: string;
+}
+
 export interface FetchLocalesResponse {
     data: Record<string, string>;
 }
