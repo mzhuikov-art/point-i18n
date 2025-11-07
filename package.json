@@ -1,8 +1,8 @@
 {
   "name": "point-i18n",
   "displayName": "Point I18n",
-  "publisher": "your-publisher",
-  "version": "1.0.0",
+  "publisher": "maksim-zhuikov",
+  "version": "1.1.0",
   "engines": {
     "vscode": "^1.87.0"
   },
