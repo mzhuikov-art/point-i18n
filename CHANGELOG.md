@@ -7,7 +7,26 @@
 
 ## [Unreleased]
 
-## [1.1.0] - 2024
+## [1.1.1] - 07.11.2025
+
+### Added
+- Настройка базовых URL через конфигурацию расширения
+  - `i18nRemote.apiBaseUrl` - базовый URL для API (auth, projects, create, update, search)
+  - `i18nRemote.localizationApiBaseUrl` - базовый URL для API локализации (fetch locales)
+- Команды для настройки URL:
+  - `Point I18n: Configure API Base URL` - настройка базового URL для API
+  - `Point I18n: Configure Localization API Base URL` - настройка базового URL для API локализации
+- Автоматическое открытие диалога настройки при отсутствии URL с кнопкой "Настроить"
+
+### Changed
+- Улучшена обработка ошибок авторизации: теперь выводится полное описание ошибки из API (`error_description`)
+- Нормализация URL: автоматическое удаление завершающего слэша (работают оба варианта: `https://example.com` и `https://example.com/`)
+- Упрощены HTTP заголовки в запросах API (удалены избыточные заголовки браузера)
+
+### Fixed
+- Исправлена обработка ошибок авторизации с выводом детального описания проблемы
+
+## [1.1.0] - 07.11.2025
 
 ### Added
 - Поиск по переведенному тексту в сайдбаре
@@ -25,7 +44,7 @@
 - Улучшена производительность поиска за счет батчевой обработки файлов (по 20 файлов параллельно)
 - Использование `readFile` вместо `openTextDocument` для ускорения чтения файлов
 
-## [1.0.0] - 2024
+## [1.0.0] - 07.11.2025
 
 ### Added
 - Inline-переводы: отображение переводов прямо в коде вместо ключей
@@ -48,7 +67,8 @@
 - Горячие клавиши:
   - `Cmd+Shift+I` (macOS) - Включить/выключить inline-переводы
 
-[Unreleased]: https://github.com/m.zhuikov/point-i18n/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/m.zhuikov/point-i18n/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/m.zhuikov/point-i18n/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/m.zhuikov/point-i18n/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/m.zhuikov/point-i18n/releases/tag/v1.0.0
 
