@@ -2,7 +2,7 @@
   "name": "point-i18n",
   "displayName": "Point I18n",
   "publisher": "maksim-zhuikov",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "engines": {
     "vscode": "^1.87.0"
   },
@@ -46,6 +46,14 @@
       {
         "command": "i18nRemote.openTranslatedForSearch",
         "title": "Point I18n: Open translated file for search"
+      },
+      {
+        "command": "i18nRemote.configApiBaseUrl",
+        "title": "Point I18n: Configure API Base URL"
+      },
+      {
+        "command": "i18nRemote.configLocalizationApiBaseUrl",
+        "title": "Point I18n: Configure Localization API Base URL"
       }
     ],
     "keybindings": [
@@ -73,6 +81,16 @@
           "type": "string",
           "default": "src",
           "description": "Путь для поиска переводов"
+        },
+        "i18nRemote.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Базовый URL для API (auth, projects, create, update, search)"
+        },
+        "i18nRemote.localizationApiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Базовый URL для API локализации (fetch locales)"
         }
       }
     }
