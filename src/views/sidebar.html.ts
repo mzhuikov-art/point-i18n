@@ -327,6 +327,55 @@ export function getSidebarHtml(): string {
         .section-content {
             margin-top: 8px;
         }
+        
+        .translated-search-result-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: var(--vscode-textBlockQuote-background);
+            border-radius: 4px;
+            border-left: 3px solid var(--vscode-textLink-foreground);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .translated-search-result-item:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+        
+        .translated-search-result-file {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--vscode-textLink-foreground);
+            margin-bottom: 4px;
+        }
+        
+        .translated-search-result-line {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 6px;
+        }
+        
+        .translated-search-result-key {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 11px;
+            color: var(--vscode-textLink-foreground);
+            margin-bottom: 4px;
+        }
+        
+        .translated-search-result-translation {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .translated-search-result-preview {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+            padding: 4px;
+            background: var(--vscode-editor-background);
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -417,6 +466,26 @@ export function getSidebarHtml(): string {
         </div>
     </div>
     
+    <!-- Поиск по переведенному тексту -->
+    <div id="translatedSearchSection" class="section hidden collapsed">
+        <div class="section-title">📁 Поиск в проекте</div>
+        <div class="section-content">
+            <label style="display: block; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">Путь поиска:</label>
+            <input id="translatedSearchPath" type="text" placeholder="src" value="src" style="margin-bottom: 12px;" />
+            <input id="translatedSearchInput" type="text" placeholder="Введите текст для поиска в переводах..." />
+            <div id="translatedSearchStatus" style="margin-top: 8px; font-size: 12px; opacity: 0.7; display: none;"></div>
+            <div id="translatedSearchResults" class="hidden" style="margin-top: 12px; max-height: 400px; overflow-y: auto;">
+                <div style="font-size: 13px; font-weight: 600; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Найдено:</div>
+                <div id="translatedSearchResultsList"></div>
+            </div>
+            <div id="translatedSearchEmpty" class="hidden">
+                <div class="status" style="margin-top: 12px;">
+                    🔍 Введите текст для поиска
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Модалка редактирования -->
     <div id="editModal" class="modal hidden">
         <div class="modal-content">
@@ -487,6 +556,13 @@ export function getSidebarHtml(): string {
         const prevPageBtn = document.getElementById('prevPageBtn');
         const nextPageBtn = document.getElementById('nextPageBtn');
         const pageInfo = document.getElementById('pageInfo');
+        const translatedSearchSection = document.getElementById('translatedSearchSection');
+        const translatedSearchInput = document.getElementById('translatedSearchInput');
+        const translatedSearchPath = document.getElementById('translatedSearchPath');
+        const translatedSearchResults = document.getElementById('translatedSearchResults');
+        const translatedSearchResultsList = document.getElementById('translatedSearchResultsList');
+        const translatedSearchEmpty = document.getElementById('translatedSearchEmpty');
+        const translatedSearchStatus = document.getElementById('translatedSearchStatus');
         
         // Состояние пагинации
         let currentSearchQuery = '';
@@ -595,6 +671,47 @@ export function getSidebarHtml(): string {
             vscode.postMessage({ command: 'refresh' });
         };
         
+        // Поиск по переведенному тексту с debounce
+        let translatedSearchTimeout;
+        const performTranslatedSearch = () => {
+            clearTimeout(translatedSearchTimeout);
+            const query = translatedSearchInput.value.trim();
+            const searchPath = translatedSearchPath.value.trim() || 'src';
+            
+            if (!query) {
+                translatedSearchResults.classList.add('hidden');
+                translatedSearchEmpty.classList.remove('hidden');
+                translatedSearchStatus.style.display = 'none';
+                return;
+            }
+            
+            translatedSearchStatus.style.display = 'block';
+            translatedSearchStatus.textContent = '⏳ Поиск...';
+            translatedSearchResults.classList.add('hidden');
+            translatedSearchEmpty.classList.add('hidden');
+            
+            translatedSearchTimeout = setTimeout(() => {
+                vscode.postMessage({
+                    command: 'searchTranslatedText',
+                    query: query,
+                    searchPath: searchPath
+                });
+            }, 500);
+        };
+        
+        // Сохраняем путь поиска при изменении и запускаем поиск если есть запрос
+        translatedSearchPath.onchange = () => {
+            const searchPath = translatedSearchPath.value.trim() || 'src';
+            // Сохраняем путь
+            vscode.postMessage({
+                command: 'searchTranslatedText',
+                query: translatedSearchInput.value.trim(),
+                searchPath: searchPath
+            });
+        };
+        
+        translatedSearchInput.oninput = performTranslatedSearch;
+        
         cancelEditBtn.onclick = () => {
             editModal.classList.add('hidden');
         };
@@ -700,6 +817,14 @@ export function getSidebarHtml(): string {
                     break;
                 case 'addKeyToResults':
                     addKeyToResults(message.key, message.translations);
+                    break;
+                case 'translatedSearchResults':
+                    showTranslatedSearchResults(message.results || []);
+                    break;
+                case 'updateSearchPath':
+                    if (message.searchPath) {
+                        translatedSearchPath.value = message.searchPath;
+                    }
                     break;
             }
         });
@@ -855,15 +980,59 @@ export function getSidebarHtml(): string {
                 loginSection.classList.add('hidden');
                 controlsSection.classList.remove('hidden');
                 searchSection.classList.remove('hidden');
+                translatedSearchSection.classList.remove('hidden');
                 createKeySection.classList.remove('hidden');
                 // Не показываем уведомление при обновлении статуса, только при реальной авторизации
             } else {
                 loginSection.classList.remove('hidden');
                 controlsSection.classList.add('hidden');
                 searchSection.classList.add('hidden');
+                translatedSearchSection.classList.add('hidden');
                 createKeySection.classList.add('hidden');
                 authStatus.classList.add('hidden');
             }
+        }
+        
+        function showTranslatedSearchResults(results) {
+            translatedSearchStatus.style.display = 'none';
+            
+            if (results.length === 0) {
+                translatedSearchResults.classList.add('hidden');
+                translatedSearchEmpty.classList.remove('hidden');
+                translatedSearchEmpty.querySelector('.status').textContent = '❌ Ничего не найдено';
+                return;
+            }
+            
+            translatedSearchResults.classList.remove('hidden');
+            translatedSearchEmpty.classList.add('hidden');
+            
+            let html = '';
+            for (const result of results) {
+                html += '<div class="translated-search-result-item" data-file="' + escapeHtml(result.filePath) + '" data-line="' + result.line + '">';
+                html += '<div class="translated-search-result-file">📄 ' + escapeHtml(result.filePath) + '</div>';
+                html += '<div class="translated-search-result-line">Строка ' + (result.line + 1) + '</div>';
+                html += '<div class="translated-search-result-key">🔑 ' + escapeHtml(result.key) + '</div>';
+                html += '<div class="translated-search-result-translation">💬 ' + escapeHtml(result.translation) + '</div>';
+                if (result.preview) {
+                    html += '<div class="translated-search-result-preview">' + escapeHtml(result.preview) + '</div>';
+                }
+                html += '</div>';
+            }
+            
+            translatedSearchResultsList.innerHTML = html;
+            
+            // Добавляем обработчики кликов
+            translatedSearchResultsList.querySelectorAll('.translated-search-result-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const filePath = this.getAttribute('data-file');
+                    const line = parseInt(this.getAttribute('data-line') || '0');
+                    vscode.postMessage({
+                        command: 'openFileAtLine',
+                        filePath: filePath,
+                        line: line
+                    });
+                });
+            });
         }
         
         function showCreateKeyMessage(text, type = 'info') {

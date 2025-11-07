@@ -5,6 +5,7 @@ import { CacheService } from './services/cache.service';
 import { StorageService } from './services/storage.service';
 import { HoverProvider } from './providers/hover.provider';
 import { DecorationProvider } from './providers/decoration.provider';
+import { TranslatedContentProvider } from './providers/translated-content.provider';
 import { SidebarViewProvider } from './views/sidebar.view';
 import { getLoginHtml } from './views/login.html';
 
@@ -12,6 +13,19 @@ export function activate(ctx: vscode.ExtensionContext): void {
     const apiService = new ApiService();
     const cacheService = new CacheService();
     const storageService = new StorageService(ctx);
+
+    // Регистрируем провайдер для виртуальных документов с переводами
+    const translatedContentProvider = new TranslatedContentProvider(
+        apiService,
+        cacheService,
+        storageService
+    );
+    ctx.subscriptions.push(
+        vscode.workspace.registerTextDocumentContentProvider(
+            'i18n-translated',
+            translatedContentProvider
+        )
+    );
 
     // Регистрируем hover на все файлы как в i18n Ally
     const hoverProvider = vscode.languages.registerHoverProvider(
@@ -92,7 +106,8 @@ export function activate(ctx: vscode.ExtensionContext): void {
                     apiService,
                     cacheService,
                     storageService,
-                    decorationProvider
+                    decorationProvider,
+                    translatedContentProvider
                 );
             });
         })
@@ -113,6 +128,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
             if (vscode.window.activeTextEditor) {
                 await decorationProvider.updateDecorations(vscode.window.activeTextEditor);
             }
+            
+            // Обновляем все открытые виртуальные документы
+            updateAllOpenTranslatedDocuments(translatedContentProvider);
         })
     );
 
@@ -154,6 +172,64 @@ export function activate(ctx: vscode.ExtensionContext): void {
             }
         })
     );
+
+    // Команда для открытия виртуального документа с переводами для поиска
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.openTranslatedForSearch', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage('Откройте файл для поиска переводов');
+                return;
+            }
+
+            const originalUri = editor.document.uri;
+            // Создаем виртуальный URI с переведенным содержимым
+            const translatedUri = vscode.Uri.parse(
+                `i18n-translated://translated/${originalUri.path}?${originalUri.toString()}`
+            );
+
+            try {
+                const doc = await vscode.workspace.openTextDocument(translatedUri);
+                await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+                vscode.window.showInformationMessage('Открыт файл с переводами для поиска. Используйте Ctrl+F / Cmd+F для поиска.');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Ошибка при открытии переведенного файла: ${error}`);
+            }
+        })
+    );
+
+    // Обновляем виртуальные документы при изменении файлов
+    ctx.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(async event => {
+            if (event.document.uri.scheme === 'file') {
+                updateTranslatedDocument(event.document.uri, translatedContentProvider);
+            }
+        })
+    );
+
+    // Обновляем виртуальные документы при открытии файлов
+    ctx.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(async document => {
+            if (document.uri.scheme === 'file') {
+                updateTranslatedDocument(document.uri, translatedContentProvider);
+            }
+        })
+    );
+}
+
+function updateTranslatedDocument(originalUri: vscode.Uri, provider: TranslatedContentProvider): void {
+    const translatedUri = vscode.Uri.parse(
+        `i18n-translated://translated/${originalUri.path}?${originalUri.toString()}`
+    );
+    provider.update(translatedUri);
+}
+
+function updateAllOpenTranslatedDocuments(provider: TranslatedContentProvider): void {
+    vscode.workspace.textDocuments.forEach(doc => {
+        if (doc.uri.scheme === 'i18n-translated') {
+            provider.update(doc.uri);
+        }
+    });
 }
 
 async function handleWebviewMessage(
@@ -162,17 +238,18 @@ async function handleWebviewMessage(
     apiService: ApiService,
     cacheService: CacheService,
     storageService: StorageService,
-    decorationProvider: DecorationProvider
+    decorationProvider: DecorationProvider,
+    translatedContentProvider: TranslatedContentProvider
 ): Promise<void> {
     switch (msg.command) {
         case 'login':
-            await handleLogin(msg, panel, apiService, cacheService, storageService, decorationProvider);
+            await handleLogin(msg, panel, apiService, cacheService, storageService, decorationProvider, translatedContentProvider);
             break;
         case 'logout':
             await handleLogout(cacheService, storageService);
             break;
         case 'fetchNow':
-            await handleFetchNow(apiService, cacheService, storageService, decorationProvider);
+            await handleFetchNow(apiService, cacheService, storageService, decorationProvider, translatedContentProvider);
             break;
     }
 }
@@ -183,7 +260,8 @@ async function handleLogin(
     apiService: ApiService,
     cacheService: CacheService,
     storageService: StorageService,
-    decorationProvider: DecorationProvider
+    decorationProvider: DecorationProvider,
+    translatedContentProvider: TranslatedContentProvider
 ): Promise<void> {
     try {
         const token = await apiService.authenticate(msg.login, msg.password);
@@ -203,6 +281,9 @@ async function handleLogin(
         if (vscode.window.activeTextEditor) {
             await decorationProvider.updateDecorations(vscode.window.activeTextEditor);
         }
+        
+        // Обновляем все открытые виртуальные документы
+        updateAllOpenTranslatedDocuments(translatedContentProvider);
     } catch (err: any) {
         panel.webview.postMessage({ status: 'error', message: String(err) });
     }
@@ -221,7 +302,8 @@ async function handleFetchNow(
     apiService: ApiService,
     cacheService: CacheService,
     storageService: StorageService,
-    decorationProvider: DecorationProvider
+    decorationProvider: DecorationProvider,
+    translatedContentProvider: TranslatedContentProvider
 ): Promise<void> {
     const token = await storageService.getToken();
     
@@ -237,6 +319,9 @@ async function handleFetchNow(
     if (vscode.window.activeTextEditor) {
         await decorationProvider.updateDecorations(vscode.window.activeTextEditor);
     }
+    
+    // Обновляем все открытые виртуальные документы
+    updateAllOpenTranslatedDocuments(translatedContentProvider);
 }
 
 async function fetchLocalesAndCache(
