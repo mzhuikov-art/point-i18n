@@ -198,6 +198,156 @@ export function activate(ctx: vscode.ExtensionContext): void {
         })
     );
 
+    // Команда для настройки базового URL API
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('apiBaseUrl') || '';
+            
+            const url = await vscode.window.showInputBox({
+                prompt: 'Введите базовый URL для API (auth, projects, create, update, search)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('apiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+    // Команда для настройки базового URL API локализации
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configLocalizationApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('localizationApiBaseUrl') || '';
+            
+            const url = await vscode.window.showInputBox({
+                prompt: 'Введите базовый URL для API локализации (fetch locales)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('localizationApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Localization API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+    // Обновляем виртуальные документы при изменении файлов
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('apiBaseUrl') || '';
+            
+            const url = await vscode.window.showInputBox({
+                prompt: 'Введите базовый URL для API (auth, projects, create, update, search)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('apiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+    // Команда для настройки базового URL API локализации
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configLocalizationApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('localizationApiBaseUrl') || '';
+            
+            const url = await vscode.window.showInputBox({
+                prompt: 'Введите базовый URL для API локализации (fetch locales)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('localizationApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Localization API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+
+    // Команда для открытия виртуального документа с переводами для поиска
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.openTranslatedForSearch', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showWarningMessage('Откройте файл для поиска переводов');
+                return;
+            }
+
+            const originalUri = editor.document.uri;
+            // Создаем виртуальный URI с переведенным содержимым
+            const translatedUri = vscode.Uri.parse(
+                `i18n-translated://translated/${originalUri.path}?${originalUri.toString()}`
+            );
+
+            try {
+                const doc = await vscode.workspace.openTextDocument(translatedUri);
+                await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+                vscode.window.showInformationMessage('Открыт файл с переводами для поиска. Используйте Ctrl+F / Cmd+F для поиска.');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Ошибка при открытии переведенного файла: ${error}`);
+            }
+        })
+    );
+
     // Обновляем виртуальные документы при изменении файлов
     ctx.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(async event => {
@@ -285,7 +435,9 @@ async function handleLogin(
         // Обновляем все открытые виртуальные документы
         updateAllOpenTranslatedDocuments(translatedContentProvider);
     } catch (err: any) {
-        panel.webview.postMessage({ status: 'error', message: String(err) });
+        const errorMessage = err.message || String(err);
+        panel.webview.postMessage({ status: 'error', message: errorMessage });
+        vscode.window.showErrorMessage(`Ошибка авторизации: ${errorMessage}`);
     }
 }
 

@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
-import { authUrl, getFetchLocalesUrl, getCreateKeyUrl, getUpdateKeyUrl, getSearchKeysUrl, getProjectsUrl } from '../constants';
-import { AuthRequest, AuthResponse, FetchLocalesResponse, CreateKeyRequest, CreateKeyResponse, CreateKeyErrorResponse, UpdateKeyResponse, SearchKeysResponse, ProjectsResponse } from './api.service.types';
+import { getAuthUrl, getFetchLocalesUrl, getCreateKeyUrl, getUpdateKeyUrl, getSearchKeysUrl, getProjectsUrl } from '../constants';
+import { AuthRequest, AuthResponse, AuthErrorResponse, FetchLocalesResponse, CreateKeyRequest, CreateKeyResponse, CreateKeyErrorResponse, UpdateKeyResponse, SearchKeysResponse, ProjectsResponse } from './api.service.types';
 
 export class ApiService {
     private readonly CLIENT_ID = 'auth-client';
@@ -12,30 +12,26 @@ export class ApiService {
     async authenticate(username: string, password: string): Promise<string | null> {
         const formBody = this.buildAuthBody(username, password);
         
-        const res = await fetch(authUrl, {
+        const res = await fetch(await getAuthUrl(), {
             headers: {
-                "accept": "application/json, text/plain, */*",
-                "accept-language": "ru",
-                "cache-control": "no-cache",
-                "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
                 "endpoint": "KC_AUTH",
-                "pragma": "no-cache",
-                "priority": "u=1, i",
-                "sec-ch-ua": "\"Google Chrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": "\"macOS\"",
-                "sec-fetch-dest": "empty",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-site": "cross-site",
-                "timezone": "Asia/Tashkent",
-                "Referer": "http://localhost:3000/"
+                "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
             },
             body: formBody.toString(),
             method: "POST"
         });
 
         if (!res.ok) {
-            return null;
+            try {
+                const errorData: AuthErrorResponse = await res.json();
+                const errorMessage = errorData.error_description || errorData.error || 'Ошибка авторизации';
+                throw new Error(errorMessage);
+            } catch (parseError) {
+                if (parseError instanceof Error && parseError.message !== 'Unexpected end of JSON input') {
+                    throw parseError;
+                }
+                throw new Error(`Ошибка авторизации: ${res.status} ${res.statusText}`);
+            }
         }
 
         const data: AuthResponse = await res.json();
@@ -43,23 +39,10 @@ export class ApiService {
     }
 
     async fetchProjects(token: string): Promise<ProjectsResponse> {
-        const url = getProjectsUrl();
+        const url = await getProjectsUrl();
         const res = await fetch(url, {
             headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'ru',
                 'authorization': `Bearer ${token}`,
-                'cache-control': 'no-cache',
-                'pragma': 'no-cache',
-                'priority': 'u=1, i',
-                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"macOS"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site',
-                'timezone': 'Asia/Tashkent',
-                'Referer': 'https://esb-superadmin-dev.kapitalbank.uz/'
             },
             method: 'GET'
         });
@@ -73,7 +56,7 @@ export class ApiService {
     }
 
     async fetchLocales(token: string, locale: string, projectKey: string): Promise<Record<string, string>> {
-        const url = getFetchLocalesUrl(locale, projectKey);
+        const url = await getFetchLocalesUrl(locale, projectKey);
         const res = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${token}`
@@ -89,25 +72,12 @@ export class ApiService {
     }
 
     async createKey(token: string, request: CreateKeyRequest, projectKey: string): Promise<CreateKeyResponse> {
-        const url = getCreateKeyUrl(projectKey);
+        const url = await getCreateKeyUrl(projectKey);
         const res = await fetch(url, {
             method: 'POST',
             headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'ru',
                 'authorization': `Bearer ${token}`,
-                'cache-control': 'no-cache',
                 'content-type': 'application/json',
-                'pragma': 'no-cache',
-                'priority': 'u=1, i',
-                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"macOS"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site',
-                'timezone': 'Asia/Tashkent',
-                'Referer': 'https://esb-superadmin-dev.kapitalbank.uz/'
             },
             body: JSON.stringify(request)
         });
@@ -129,25 +99,12 @@ export class ApiService {
     }
 
     async updateKey(token: string, request: CreateKeyRequest, projectKey: string): Promise<UpdateKeyResponse> {
-        const url = getUpdateKeyUrl(projectKey);
+        const url = await getUpdateKeyUrl(projectKey);
         const res = await fetch(url, {
             method: 'POST',
             headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'ru',
                 'authorization': `Bearer ${token}`,
-                'cache-control': 'no-cache',
                 'content-type': 'application/json',
-                'pragma': 'no-cache',
-                'priority': 'u=1, i',
-                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"macOS"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site',
-                'timezone': 'Asia/Tashkent',
-                'Referer': 'https://esb-superadmin-dev.kapitalbank.uz/'
             },
             body: JSON.stringify(request)
         });
@@ -190,24 +147,11 @@ export class ApiService {
             params.append('search', search.trim());
         }
 
-        const url = `${getSearchKeysUrl(projectKey)}?${params.toString()}`;
+        const url = `${await getSearchKeysUrl(projectKey)}?${params.toString()}`;
         const res = await fetch(url, {
             method: 'GET',
             headers: {
-                'accept': 'application/json, text/plain, */*',
-                'accept-language': 'ru',
                 'authorization': `Bearer ${token}`,
-                'cache-control': 'no-cache',
-                'pragma': 'no-cache',
-                'priority': 'u=1, i',
-                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"macOS"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site',
-                'timezone': 'Asia/Tashkent',
-                'Referer': 'https://esb-superadmin-dev.kapitalbank.uz/'
             }
         });
 
