@@ -2,11 +2,12 @@
   "name": "point-i18n",
   "displayName": "Point I18n",
   "publisher": "mzhuikov-art",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/mzhuikov-art/point-i18n.git"
   },
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.87.0"
   },
