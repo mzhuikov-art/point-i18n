@@ -53,6 +53,11 @@ export async function getAuthUrl(): Promise<string> {
     return `${baseUrl}/api/v1/proxy/realms/auth/protocol/openid-connect/token`;
 }
 
+export async function getUserInfoUrl(): Promise<string> {
+    const baseUrl = await getApiBaseUrl();
+    return `${baseUrl}/api/v1/proxy/realms/auth/protocol/openid-connect/userinfo`;
+}
+
 export async function getProjectsUrl(): Promise<string> {
     const baseUrl = await getApiBaseUrl();
     return `${baseUrl}/api/v1/proxy/localization/api/localization-project?pageSize=100`;
