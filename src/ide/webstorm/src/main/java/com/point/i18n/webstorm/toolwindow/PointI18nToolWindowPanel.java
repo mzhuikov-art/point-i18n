@@ -29,6 +29,7 @@ public class PointI18nToolWindowPanel extends JPanel {
     private final com.intellij.openapi.project.Project project;
     
     private JLabel statusLabel;
+    private JLabel pageLabel;
     private JComboBox<String> localeComboBox;
     private JComboBox<String> projectComboBox;
     private JTextField searchField;
@@ -79,10 +80,11 @@ public class PointI18nToolWindowPanel extends JPanel {
     
     private void initializeUI() {
         setLayout(new BorderLayout());
-        setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         
-        // Create tabs
+        // Create tabs with better styling
         JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         
         // Tab 1: Authentication
         JPanel authTab = createAuthTab();
@@ -106,167 +108,158 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         add(tabbedPane, BorderLayout.CENTER);
         
-        // Status bar at bottom
-        statusLabel = new JLabel("Status: Ready");
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        add(statusLabel, BorderLayout.SOUTH);
+        // Status bar at bottom with project name
+        JPanel statusPanel = new JPanel(new BorderLayout());
+        statusPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        statusLabel = new JLabel("📁 Project: " + configService.getProjectKey());
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        statusPanel.add(statusLabel, BorderLayout.CENTER);
+        add(statusPanel, BorderLayout.SOUTH);
     }
     
     private JPanel createAuthTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         
-        // Title
-        JLabel title = new JLabel("Authentication");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        // Title with icon
+        JLabel title = new JLabel("🔐 Авторизация");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
         contentPanel.add(title);
-        contentPanel.add(Box.createVerticalStrut(20));
+        contentPanel.add(Box.createVerticalStrut(16));
         
-        // Login section
-        JPanel loginPanel = new JPanel(new BorderLayout(5, 5));
-        loginPanel.setBorder(BorderFactory.createTitledBorder("Login"));
-        loginButton = new JButton("Login");
-        loginButton.setPreferredSize(new Dimension(200, 30));
+        // Login button with modern styling
+        loginButton = new JButton("🔑 Войти");
+        styleButton(loginButton, true);
+        loginButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         loginButton.addActionListener(e -> performLogin());
-        loginPanel.add(loginButton, BorderLayout.CENTER);
-        contentPanel.add(loginPanel);
-        contentPanel.add(Box.createVerticalStrut(10));
+        contentPanel.add(loginButton);
+        contentPanel.add(Box.createVerticalStrut(12));
         
-        // Logout section
-        JPanel logoutPanel = new JPanel(new BorderLayout(5, 5));
-        logoutPanel.setBorder(BorderFactory.createTitledBorder("Logout"));
-        logoutButton = new JButton("Logout");
-        logoutButton.setPreferredSize(new Dimension(200, 30));
+        // Logout button
+        logoutButton = new JButton("🚪 Выйти");
+        styleButton(logoutButton, false);
+        logoutButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logoutButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         logoutButton.addActionListener(e -> performLogout());
-        logoutPanel.add(logoutButton, BorderLayout.CENTER);
-        contentPanel.add(logoutPanel);
+        contentPanel.add(logoutButton);
         
-        // Center content
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        centerPanel.add(contentPanel, gbc);
-        
-        panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(contentPanel, BorderLayout.NORTH);
         
         return panel;
     }
     
+    private void styleButton(JButton button, boolean isPrimary) {
+        button.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        if (isPrimary) {
+            button.setOpaque(true);
+        }
+    }
+    
     private JPanel createSettingsTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         
         // Title
-        JLabel title = new JLabel("Settings");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        JLabel title = new JLabel("⚙️ Настройки");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
         contentPanel.add(title);
-        contentPanel.add(Box.createVerticalStrut(20));
+        contentPanel.add(Box.createVerticalStrut(16));
         
-        // Locale selector
-        JPanel localePanel = new JPanel(new BorderLayout(10, 5));
-        localePanel.setBorder(BorderFactory.createTitledBorder("Locale"));
-        JLabel localeLabel = new JLabel("Select locale:");
-        localePanel.add(localeLabel, BorderLayout.WEST);
-        localeComboBox = new JComboBox<>(new String[]{"ru", "en", "uz"});
-        localeComboBox.setSelectedItem(configService.getLocale());
-        localeComboBox.setPreferredSize(new Dimension(150, 25));
+        // Locale selector with modern styling
+        JLabel localeLabel = new JLabel("Основной язык");
+        localeLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        localeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(localeLabel);
+        contentPanel.add(Box.createVerticalStrut(6));
+        
+        localeComboBox = new JComboBox<>(new String[]{"🇷🇺 ru", "🇬🇧 en", "🇺🇿 uz"});
+        String currentLocale = configService.getLocale();
+        localeComboBox.setSelectedItem("🇷🇺 " + currentLocale);
+        localeComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        localeComboBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        localeComboBox.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         localeComboBox.addActionListener(e -> {
-            String locale = (String) localeComboBox.getSelectedItem();
-            if (locale != null) {
+            String selected = (String) localeComboBox.getSelectedItem();
+            if (selected != null) {
+                String locale = selected.substring(selected.length() - 2); // Extract "ru", "en", "uz"
                 configService.setLocale(locale);
                 refreshSearch();
             }
         });
-        localePanel.add(localeComboBox, BorderLayout.CENTER);
-        contentPanel.add(localePanel);
-        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(localeComboBox);
+        contentPanel.add(Box.createVerticalStrut(16));
         
         // Project selector
-        JPanel projectPanel = new JPanel(new BorderLayout(10, 5));
-        projectPanel.setBorder(BorderFactory.createTitledBorder("Project"));
-        JLabel projectLabel = new JLabel("Select project:");
-        projectPanel.add(projectLabel, BorderLayout.WEST);
+        JLabel projectLabel = new JLabel("Проект");
+        projectLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+        projectLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(projectLabel);
+        contentPanel.add(Box.createVerticalStrut(6));
+        
         projectComboBox = new JComboBox<>();
         projectComboBox.setEditable(true);
-        projectComboBox.setPreferredSize(new Dimension(200, 25));
+        projectComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        projectComboBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        projectComboBox.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
         projectComboBox.addActionListener(e -> {
             String projectKey = (String) projectComboBox.getSelectedItem();
             if (projectKey != null && !projectKey.isEmpty()) {
                 configService.setProjectKey(projectKey);
+                statusLabel.setText("📁 Project: " + projectKey);
                 refreshSearch();
             }
         });
-        projectPanel.add(projectComboBox, BorderLayout.CENTER);
-        contentPanel.add(projectPanel);
+        contentPanel.add(projectComboBox);
         
-        // Center content
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.NORTH;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        centerPanel.add(contentPanel, gbc);
-        
-        panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(contentPanel, BorderLayout.NORTH);
         
         return panel;
     }
     
     private JPanel createActionsTab() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         
         // Title
-        JLabel title = new JLabel("Actions");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        JLabel title = new JLabel("⚡ Действия");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
         contentPanel.add(title);
-        contentPanel.add(Box.createVerticalStrut(20));
+        contentPanel.add(Box.createVerticalStrut(16));
         
-        // Refresh section
-        JPanel refreshPanel = new JPanel(new BorderLayout(5, 5));
-        refreshPanel.setBorder(BorderFactory.createTitledBorder("Refresh Locales"));
-        JLabel refreshLabel = new JLabel("Fetch and cache all locales from API");
-        refreshPanel.add(refreshLabel, BorderLayout.NORTH);
-        refreshButton = new JButton("Refresh Locales");
-        refreshButton.setPreferredSize(new Dimension(200, 30));
+        refreshButton = new JButton("🔄 Обновить переводы");
+        styleButton(refreshButton, true);
+        refreshButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        refreshButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         refreshButton.addActionListener(e -> performRefresh());
-        refreshPanel.add(refreshButton, BorderLayout.CENTER);
-        contentPanel.add(refreshPanel);
-        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(refreshButton);
+        contentPanel.add(Box.createVerticalStrut(12));
         
-        // Create key section
-        JPanel createKeyPanel = new JPanel(new BorderLayout(5, 5));
-        createKeyPanel.setBorder(BorderFactory.createTitledBorder("Create New Key"));
-        JLabel createKeyLabel = new JLabel("Create a new i18n key with translations");
-        createKeyPanel.add(createKeyLabel, BorderLayout.NORTH);
-        createKeyButton = new JButton("Create New Key");
-        createKeyButton.setPreferredSize(new Dimension(200, 30));
+        // Create key button
+        createKeyButton = new JButton("➕ Создать ключ");
+        styleButton(createKeyButton, true);
+        createKeyButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        createKeyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         createKeyButton.addActionListener(e -> showCreateKeyDialog());
-        createKeyPanel.add(createKeyButton, BorderLayout.CENTER);
-        contentPanel.add(createKeyPanel);
+        contentPanel.add(createKeyButton);
         
-        // Center content
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.NORTH;
-        gbc.insets = new Insets(10, 10, 10, 10);
-        centerPanel.add(contentPanel, gbc);
-        
-        panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(contentPanel, BorderLayout.NORTH);
         
         return panel;
     }
@@ -277,14 +270,14 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         // Top section with search
         JPanel topSection = new JPanel(new BorderLayout(5, 5));
-        topSection.setBorder(BorderFactory.createTitledBorder("Search Keys"));
+        topSection.setBorder(BorderFactory.createTitledBorder("Поиск ключей"));
         
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
-        searchPanel.add(new JLabel("Query:"), BorderLayout.WEST);
+        searchPanel.add(new JLabel("Запрос:"), BorderLayout.WEST);
         searchField = new JTextField();
         searchField.addActionListener(e -> performSearch());
         searchPanel.add(searchField, BorderLayout.CENTER);
-        JButton searchButton = new JButton("Search");
+        JButton searchButton = new JButton("Искать");
         searchButton.addActionListener(e -> performSearch());
         searchPanel.add(searchButton, BorderLayout.EAST);
         
@@ -311,28 +304,28 @@ public class PointI18nToolWindowPanel extends JPanel {
         });
         
         JScrollPane scrollPane = new JScrollPane(keysTable);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Keys"));
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Ключи"));
         panel.add(scrollPane, BorderLayout.CENTER);
         
         // Pagination panel
         JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        JButton prevButton = new JButton("◀ Previous");
+        JButton prevButton = new JButton("◀ Предыдущая");
         prevButton.addActionListener(e -> {
             if (currentPage > 1) {
                 currentPage--;
-                performSearch();
+                performSearch(true); // true = это пагинация
             }
         });
         paginationPanel.add(prevButton);
         
-        JLabel pageLabel = new JLabel("Page: " + currentPage + " / " + totalPages);
+        pageLabel = new JLabel("Страница: " + currentPage + " / " + totalPages);
         paginationPanel.add(pageLabel);
         
-        JButton nextButton = new JButton("Next ▶");
+        JButton nextButton = new JButton("Следующая ▶");
         nextButton.addActionListener(e -> {
             if (currentPage < totalPages) {
                 currentPage++;
-                performSearch();
+                performSearch(true); // true = это пагинация
             }
         });
         paginationPanel.add(nextButton);
@@ -349,14 +342,12 @@ public class PointI18nToolWindowPanel extends JPanel {
         JPanel topSection = new JPanel();
         topSection.setLayout(new BoxLayout(topSection, BoxLayout.Y_AXIS));
         
-        // Search by translation section
-        CollapsiblePanel searchSection = new CollapsiblePanel("Search by Translation");
-        
+        // Search query panel
         JPanel searchQueryPanel = new JPanel(new BorderLayout(5, 0));
-        searchQueryPanel.add(new JLabel("Translation text:"), BorderLayout.WEST);
+        searchQueryPanel.add(new JLabel("Текст перевода:"), BorderLayout.WEST);
         searchTranslatedField = new JTextField();
         searchQueryPanel.add(searchTranslatedField, BorderLayout.CENTER);
-        JButton searchTranslatedButton = new JButton("Find");
+        JButton searchTranslatedButton = new JButton("Найти");
         searchTranslatedButton.addActionListener(e -> {
             String query = searchTranslatedField.getText().trim();
             String searchPath = searchPathField.getText().trim();
@@ -365,21 +356,21 @@ public class PointI18nToolWindowPanel extends JPanel {
             }
         });
         searchQueryPanel.add(searchTranslatedButton, BorderLayout.EAST);
-        searchSection.addComponent(searchQueryPanel);
+        topSection.add(searchQueryPanel);
+        
+        topSection.add(Box.createVerticalStrut(8));
         
         // Search path input
         JPanel searchPathPanel = new JPanel(new BorderLayout(5, 0));
-        searchPathPanel.add(new JLabel("Search path:"), BorderLayout.WEST);
+        searchPathPanel.add(new JLabel("Путь поиска:"), BorderLayout.WEST);
         searchPathField = new JTextField(configService.getSearchPath());
         searchPathPanel.add(searchPathField, BorderLayout.CENTER);
-        searchSection.addComponent(searchPathPanel);
-        
-        topSection.add(searchSection);
+        topSection.add(searchPathPanel);
         
         // Scrollable top section
         JScrollPane topScrollPane = new JScrollPane(topSection);
         topScrollPane.setPreferredSize(new Dimension(0, 150));
-        topScrollPane.setBorder(BorderFactory.createTitledBorder("Search Options"));
+        topScrollPane.setBorder(BorderFactory.createTitledBorder("Параметры поиска"));
         
         panel.add(topScrollPane, BorderLayout.NORTH);
         
@@ -425,7 +416,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         });
         
         JScrollPane translatedSearchScrollPane = new JScrollPane(translatedSearchTree);
-        translatedSearchScrollPane.setBorder(BorderFactory.createTitledBorder("Search Results"));
+        translatedSearchScrollPane.setBorder(BorderFactory.createTitledBorder("Результаты поиска"));
         
         panel.add(translatedSearchScrollPane, BorderLayout.CENTER);
         
@@ -542,6 +533,7 @@ public class PointI18nToolWindowPanel extends JPanel {
             }
             
             System.out.println("Selected project: " + projectComboBox.getSelectedItem());
+            statusLabel.setText("📁 Project: " + projectComboBox.getSelectedItem());
         } catch (Exception e) {
             System.err.println("Failed to load projects: " + e.getMessage());
             e.printStackTrace();
@@ -582,15 +574,15 @@ public class PointI18nToolWindowPanel extends JPanel {
         }
         
         if (needConfig) {
-            Messages.showErrorDialog("Please configure API URLs first via Tools menu", "Point I18n");
+            Messages.showErrorDialog("Сначала настройте API URLs через меню Tools", "Point I18n");
             return;
         }
         
         // Запрашиваем username
         String username = JOptionPane.showInputDialog(
             this,
-            "Enter your username:",
-            "Point I18n - Login",
+            "Введите имя пользователя:",
+            "Point I18n - Вход",
             JOptionPane.QUESTION_MESSAGE
         );
         
@@ -603,7 +595,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         int option = JOptionPane.showConfirmDialog(
             this,
             passwordField,
-            "Enter your password:",
+            "Введите пароль:",
             JOptionPane.OK_CANCEL_OPTION,
             JOptionPane.QUESTION_MESSAGE
         );
@@ -614,32 +606,32 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         String password = new String(passwordField.getPassword());
         if (password.trim().isEmpty()) {
-            Messages.showErrorDialog("Password cannot be empty", "Point I18n");
+            Messages.showErrorDialog("Пароль не может быть пустым", "Point I18n");
             return;
         }
         
         try {
             ApiService.AuthResponse authResponse = apiService.authenticate(username, password);
             storageService.saveTokens(authResponse);
-            Messages.showInfoMessage("Login successful!", "Point I18n");
+            Messages.showInfoMessage("Вход выполнен успешно!", "Point I18n");
             updateView();
             performRefresh();
         } catch (Exception ex) {
-            Messages.showErrorDialog("Authentication failed: " + ex.getMessage(), "Point I18n");
+            Messages.showErrorDialog("Ошибка аутентификации: " + ex.getMessage(), "Point I18n");
         }
     }
     
     private void performLogout() {
         storageService.deleteTokens();
         cacheService.clear();
-        Messages.showInfoMessage("Logged out", "Point I18n");
+        Messages.showInfoMessage("Выход выполнен", "Point I18n");
         updateView();
     }
     
     private void performRefresh() {
         String token = storageService.getAccessToken();
         if (token == null || token.isEmpty()) {
-            Messages.showErrorDialog("Please login first", "Point I18n");
+            Messages.showErrorDialog("Сначала войдите в систему", "Point I18n");
             return;
         }
         
@@ -660,16 +652,26 @@ public class PointI18nToolWindowPanel extends JPanel {
             
             updateStats();
             refreshSearch();
-            Messages.showInfoMessage("Locales refreshed!", "Point I18n");
+            Messages.showInfoMessage("Локали обновлены!", "Point I18n");
         } catch (Exception ex) {
-            Messages.showErrorDialog("Failed to refresh: " + ex.getMessage(), "Point I18n");
+            Messages.showErrorDialog("Ошибка обновления: " + ex.getMessage(), "Point I18n");
         }
     }
     
     private void performSearch() {
-        String query = searchField.getText().trim();
-        currentSearchQuery = query;
-        currentPage = 1;
+        performSearch(false);
+    }
+    
+    private void performSearch(boolean isPagination) {
+        String query = isPagination ? currentSearchQuery : searchField.getText().trim();
+        
+        // Сбрасываем страницу только если запрос изменился и это не пагинация
+        if (!isPagination && !query.equals(currentSearchQuery)) {
+            currentSearchQuery = query;
+            currentPage = 1;
+        } else if (!isPagination) {
+            currentSearchQuery = query;
+        }
         
         String token = storageService.getAccessToken();
         if (token == null || token.isEmpty()) {
@@ -729,6 +731,11 @@ public class PointI18nToolWindowPanel extends JPanel {
                 keyData.translations != null ? keyData.translations.uz : ""
             });
         }
+        
+        // Обновляем label пагинации
+        if (pageLabel != null) {
+            pageLabel.setText("Страница: " + currentPage + " / " + totalPages);
+        }
     }
     
     private void showCreateKeyDialog() {
@@ -770,7 +777,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         // Загружаем локали если их нет
         if (!cacheService.has(locale)) {
-            Messages.showErrorDialog("Locale " + locale + " not loaded. Please fetch locales first.", "Point I18n");
+            Messages.showErrorDialog("Локаль " + locale + " не загружена. Сначала обновите переводы.", "Point I18n");
             return;
         }
         
@@ -791,7 +798,7 @@ public class PointI18nToolWindowPanel extends JPanel {
             translatedSearchRootNode.removeAllChildren();
             ((javax.swing.tree.DefaultTreeModel) translatedSearchTree.getModel()).reload();
             currentTranslatedSearchResults.clear();
-            Messages.showInfoMessage("No translations found containing: " + query, "Point I18n");
+            Messages.showInfoMessage("Не найдено переводов, содержащих: " + query, "Point I18n");
             return;
         }
         
@@ -805,7 +812,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         try {
             if (project == null) {
-                Messages.showErrorDialog("No project found", "Point I18n");
+                Messages.showErrorDialog("Проект не найден", "Point I18n");
                 return;
             }
             
@@ -823,9 +830,9 @@ public class PointI18nToolWindowPanel extends JPanel {
                 String projectName = project.getName();
                 String basePath = project.getBasePath();
                 Messages.showErrorDialog(
-                    "Project base directory not found.\n" +
-                    "Project: " + projectName + "\n" +
-                    "Base path: " + (basePath != null ? basePath : "null"),
+                    "Базовая директория проекта не найдена.\n" +
+                    "Проект: " + projectName + "\n" +
+                    "Базовый путь: " + (basePath != null ? basePath : "null"),
                     "Point I18n"
                 );
                 return;
@@ -846,7 +853,7 @@ public class PointI18nToolWindowPanel extends JPanel {
             }
             
             if (searchDir == null || !searchDir.exists()) {
-                Messages.showErrorDialog("Search path not found: " + searchPathNormalized + "\nBase dir: " + baseDir.getPath(), "Point I18n");
+                Messages.showErrorDialog("Путь поиска не найден: " + searchPathNormalized + "\nБазовая директория: " + baseDir.getPath(), "Point I18n");
                 return;
             }
             
@@ -861,13 +868,13 @@ public class PointI18nToolWindowPanel extends JPanel {
             updateTranslatedSearchTree();
             
             if (currentTranslatedSearchResults.isEmpty()) {
-                Messages.showInfoMessage("No files found with matching keys. Searched in: " + searchDir.getPath(), "Point I18n");
+                Messages.showInfoMessage("Файлы с подходящими ключами не найдены. Поиск в: " + searchDir.getPath(), "Point I18n");
             } else {
-                Messages.showInfoMessage("Found " + currentTranslatedSearchResults.size() + " occurrences", "Point I18n");
+                Messages.showInfoMessage("Найдено " + currentTranslatedSearchResults.size() + " совпадений", "Point I18n");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Messages.showErrorDialog("Error searching files: " + e.getMessage() + "\n" + e.getClass().getName(), "Point I18n");
+            Messages.showErrorDialog("Ошибка поиска файлов: " + e.getMessage() + "\n" + e.getClass().getName(), "Point I18n");
         }
     }
     
@@ -1042,7 +1049,7 @@ public class PointI18nToolWindowPanel extends JPanel {
             }
             
             if (baseDir == null || !baseDir.exists()) {
-                Messages.showErrorDialog("Project base directory not found", "Point I18n");
+                Messages.showErrorDialog("Базовая директория проекта не найдена", "Point I18n");
                 return;
             }
             
@@ -1069,11 +1076,11 @@ public class PointI18nToolWindowPanel extends JPanel {
                     true
                 );
             } else {
-                Messages.showErrorDialog("File not found: " + filePath + "\nBase dir: " + baseDir.getPath(), "Point I18n");
+                Messages.showErrorDialog("Файл не найден: " + filePath + "\nБазовая директория: " + baseDir.getPath(), "Point I18n");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Messages.showErrorDialog("Error opening file: " + e.getMessage(), "Point I18n");
+            Messages.showErrorDialog("Ошибка открытия файла: " + e.getMessage(), "Point I18n");
         }
     }
 }

@@ -7,6 +7,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.point.i18n.webstorm.services.ApiService;
 import com.point.i18n.webstorm.services.CacheService;
 import com.point.i18n.webstorm.services.ConfigService;
@@ -23,6 +24,8 @@ import java.util.List;
 public class PointI18nAnnotator implements Annotator {
     private static final Logger LOG = Logger.getInstance(PointI18nAnnotator.class);
     private static boolean enabled = true;
+    // Храним обработанные позиции для каждого файла
+    private static final java.util.Map<String, java.util.Set<String>> fileProcessedPositions = new java.util.concurrent.ConcurrentHashMap<>();
     
     // Цвет для сноски (серый, немного прозрачный)
     private static final TextAttributesKey TRANSLATION_HINT = TextAttributesKey.createTextAttributesKey(
@@ -65,6 +68,25 @@ public class PointI18nAnnotator implements Annotator {
             return;
         }
         
+        PsiFile currentFile = element.getContainingFile();
+        if (currentFile == null) {
+            return;
+        }
+        
+        // Получаем уникальный идентификатор файла
+        String fileKey = currentFile.getVirtualFile() != null 
+            ? currentFile.getVirtualFile().getPath() + ":" + currentFile.getModificationStamp()
+            : currentFile.getName() + ":" + System.identityHashCode(currentFile);
+        
+        // Получаем или создаем Set для текущего файла
+        java.util.Set<String> processed = fileProcessedPositions.computeIfAbsent(fileKey, k -> {
+            // Если карта становится слишком большой, очищаем старые записи
+            if (fileProcessedPositions.size() > 100) {
+                fileProcessedPositions.clear();
+            }
+            return new java.util.HashSet<>();
+        });
+        
         // Обрабатываем только листовые элементы
         if (element.getFirstChild() != null) {
             return;
@@ -102,6 +124,19 @@ public class PointI18nAnnotator implements Annotator {
         int elementOffset = element.getTextOffset();
         
         for (I18nKeyParser.KeyInfo keyInfo : keys) {
+            // Вычисляем абсолютную позицию в файле
+            int absoluteStart = elementOffset + keyInfo.startOffset;
+            int absoluteEnd = elementOffset + keyInfo.endOffset;
+            
+            // Создаем уникальный ключ для этой позиции
+            String positionKey = absoluteStart + "-" + absoluteEnd + ":" + keyInfo.key;
+            
+            // Проверяем, не обработали ли мы уже эту позицию
+            if (processed.contains(positionKey)) {
+                continue;
+            }
+            processed.add(positionKey);
+            
             String translation = cacheService.getTranslation(locale, keyInfo.key);
             if (translation == null || translation.isEmpty()) {
                 continue;
@@ -113,10 +148,6 @@ public class PointI18nAnnotator implements Annotator {
                 : translation;
             
             try {
-                // Вычисляем абсолютную позицию в файле
-                int absoluteStart = elementOffset + keyInfo.startOffset;
-                int absoluteEnd = elementOffset + keyInfo.endOffset;
-                
                 // Создаем range для ключа
                 com.intellij.openapi.util.TextRange range = 
                     new com.intellij.openapi.util.TextRange(absoluteStart, absoluteEnd);

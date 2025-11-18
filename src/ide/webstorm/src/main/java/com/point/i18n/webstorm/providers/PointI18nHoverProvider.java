@@ -244,9 +244,9 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
         
         html.append(DocumentationMarkup.CONTENT_START);
         html.append("<table style='width:100%; border-collapse: collapse;'>");
-        html.append("<tr style='background-color: #f5f5f5;'>");
-        html.append("<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Язык</th>");
-        html.append("<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Перевод</th>");
+        html.append("<tr>");
+        html.append("<th style='padding: 8px 12px; text-align: left; opacity: 0.7;'>Язык</th>");
+        html.append("<th style='padding: 8px 12px; text-align: left; opacity: 0.7;'>Перевод</th>");
         html.append("</tr>");
         
         for (String lang : SUPPORTED_LOCALES) {
@@ -260,13 +260,13 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
             } else if (!isLocaleLoaded) {
                 displayTranslation = "<i style='color: #ff9900;'>⚠️ локаль не загружена</i>";
             } else {
-                displayTranslation = "<i style='color: #999;'>нет перевода</i>";
+                displayTranslation = "<i style='opacity: 0.5;'>нет перевода</i>";
             }
             
             html.append("<tr>");
-            html.append("<td style='border: 1px solid #ddd; padding: 8px;'>")
+            html.append("<td style='padding: 8px 12px;'>")
                 .append(flag).append(" <b>").append(lang.toUpperCase()).append("</b></td>");
-            html.append("<td style='border: 1px solid #ddd; padding: 8px;'>")
+            html.append("<td style='padding: 8px 12px;'>")
                 .append(displayTranslation).append("</td>");
             html.append("</tr>");
         }

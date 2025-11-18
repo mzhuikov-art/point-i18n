@@ -26,6 +26,8 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
     private static final Logger LOG = Logger.getInstance(PointI18nInlayHintsProvider.class);
     private static final SettingsKey<NoSettings> KEY = new SettingsKey<>("point.i18n.inlay.hints");
     private static boolean enabled = true;
+    // Храним обработанные позиции для каждого файла
+    private static final java.util.Map<String, java.util.Set<Integer>> fileProcessedOffsets = new java.util.concurrent.ConcurrentHashMap<>();
     
     public PointI18nInlayHintsProvider() {
         LOG.info("PointI18nInlayHintsProvider created");
@@ -97,6 +99,20 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
     @NotNull
     @Override
     public InlayHintsCollector getCollectorFor(@NotNull PsiFile file, @NotNull Editor editor, @NotNull NoSettings settings, @NotNull InlayHintsSink sink) {
+        // Получаем уникальный идентификатор файла
+        String fileKey = file.getVirtualFile() != null 
+            ? file.getVirtualFile().getPath() + ":" + file.getModificationStamp()
+            : file.getName() + ":" + System.identityHashCode(file);
+        
+        // Получаем или создаем Set для текущего файла
+        final java.util.Set<Integer> processedOffsets = fileProcessedOffsets.computeIfAbsent(fileKey, k -> {
+            // Если карта становится слишком большой, очищаем старые записи
+            if (fileProcessedOffsets.size() > 100) {
+                fileProcessedOffsets.clear();
+            }
+            return new java.util.HashSet<>();
+        });
+        
         return new FactoryInlayHintsCollector(editor) {
             @Override
             public boolean collect(@NotNull PsiElement element, @NotNull Editor editor, @NotNull InlayHintsSink sink) {
@@ -106,13 +122,11 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
                 }
                 
                 if (!enabled) {
-                    LOG.info("InlayHints disabled");
                     return true;
                 }
                 
                 String token = getStorageService().getAccessToken();
                 if (token == null || token.isEmpty()) {
-                    LOG.info("No access token");
                     return true;
                 }
                 
@@ -133,9 +147,7 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
                         String projectKey = configService.getProjectKey();
                         java.util.Map<String, String> locales = apiService.fetchLocales(locale, projectKey);
                         cacheService.set(locale, locales);
-                        LOG.info("Loaded locale " + locale + " for inlay hints");
                     } catch (Exception e) {
-                        LOG.warn("Failed to load locale: " + e.getMessage());
                         return true;
                     }
                 }
@@ -143,19 +155,19 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
                 // Ищем все ключи в файле
                 List<I18nKeyParser.KeyInfo> allKeys = I18nKeyParser.findAllKeys(fileText);
                 if (allKeys.isEmpty()) {
-                    LOG.info("No keys found in file");
                     return true;
                 }
                 
-                LOG.info("Found " + allKeys.size() + " keys in file " + file.getName());
-                
-                int hintsAdded = 0;
-                
-                // Для каждого ключа создаем hint
+                // Для каждого ключа создаем hint (только один раз)
                 for (I18nKeyParser.KeyInfo keyInfo : allKeys) {
+                    // Проверяем, не добавляли ли уже hint на этой позиции
+                    if (processedOffsets.contains(keyInfo.endOffset)) {
+                        continue;
+                    }
+                    processedOffsets.add(keyInfo.endOffset);
+                    
                     String translation = cacheService.getTranslation(locale, keyInfo.key);
                     if (translation == null || translation.isEmpty()) {
-                        LOG.info("No translation for key: " + keyInfo.key);
                         continue;
                     }
                     
@@ -175,14 +187,11 @@ public class PointI18nInlayHintsProvider implements InlayHintsProvider<NoSetting
                             presentation,
                             false
                         );
-                        hintsAdded++;
-                        LOG.info("Added hint for key: " + keyInfo.key + " at offset " + keyInfo.endOffset);
                     } catch (Exception e) {
-                        LOG.warn("Failed to create hint for key " + keyInfo.key + ": " + e.getMessage());
+                        // Игнорируем ошибки
                     }
                 }
                 
-                LOG.info("Added " + hintsAdded + " hints to file " + file.getName());
                 return true;
             }
         };

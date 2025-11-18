@@ -47,10 +47,11 @@
         <codeInsight.inlayProvider language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nInlayHintsProvider"/>
         
         <!-- Annotator for translation hints above keys -->
-        <annotator language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
+        <!-- Annotator временно отключен, используем только InlayHints -->
+        <!-- <annotator language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
         <annotator language="TypeScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
         <annotator language="Vue" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
-        <annotator language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
+        <annotator language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/> -->
     </extensions>
 
     <actions>
