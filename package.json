@@ -101,8 +101,10 @@
     }
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
-    "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "build": "node esbuild.config.js",
+    "build:vscode": "node esbuild.config.js",
+    "build:webstorm": "tsc --project tsconfig.json",
+    "watch": "esbuild src/ide/vscode/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "package": "pnpm build && vsce package --no-dependencies"
   },
   "devDependencies": {
