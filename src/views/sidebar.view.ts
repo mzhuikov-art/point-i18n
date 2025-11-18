@@ -18,6 +18,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         private decorationProvider: DecorationProvider
     ) {}
 
+    private showInfoMessage(message: string): void {
+        vscode.window.showInformationMessage(message);
+    }
+
     resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
@@ -92,19 +96,19 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async handleLogin(username: string, password: string): Promise<void> {
         try {
-            this.sendMessage({ command: 'showMessage', text: '⏳ Авторизация...', type: 'info' });
+            this.showInfoMessage('⏳ Авторизация...');
 
-            const token = await this.apiService.authenticate(username, password);
+            const authResponse = await this.apiService.authenticate(username, password);
             
-            if (!token) {
-                this.sendMessage({ command: 'showMessage', text: '❌ Ошибка авторизации', type: 'error' });
+            if (!authResponse.access_token) {
+                vscode.window.showErrorMessage('❌ Ошибка авторизации');
                 return;
             }
 
-            await this.storageService.saveToken(token);
-            await this.loadAllLocales(token);
+            await this.storageService.saveTokens(authResponse);
+            await this.loadAllLocales();
             
-            this.sendMessage({ command: 'showMessage', text: '✅ Успешная авторизация', type: 'success' });
+            this.showInfoMessage('✅ Успешная авторизация');
             await this.updateView();
             
             // Обновляем decorations в активном редакторе
@@ -113,11 +117,6 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             }
         } catch (error: any) {
             const errorMessage = error.message || 'Ошибка авторизации';
-            this.sendMessage({ 
-                command: 'showMessage', 
-                text: `❌ ${errorMessage}`, 
-                type: 'error' 
-            });
             vscode.window.showErrorMessage(`Ошибка авторизации: ${errorMessage}`);
         }
     }
@@ -125,7 +124,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     private async handleLogout(): Promise<void> {
         await this.storageService.deleteToken();
         this.cacheService.clear();
-        this.sendMessage({ command: 'showMessage', text: 'Выход выполнен', type: 'info' });
+        this.showInfoMessage('Выход выполнен');
         await this.updateView();
     }
 
@@ -133,15 +132,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         const token = await this.storageService.getToken();
         
         if (!token) {
-            this.sendMessage({ command: 'showMessage', text: '❌ Нет токена', type: 'error' });
+            vscode.window.showErrorMessage('❌ Нет токена');
             return;
         }
 
-        this.sendMessage({ command: 'showMessage', text: '⏳ Обновление...', type: 'info' });
+        this.showInfoMessage('⏳ Обновление...');
         
-        await this.loadAllLocales(token);
+        await this.loadAllLocales();
         
-        this.sendMessage({ command: 'showMessage', text: '✅ Переводы обновлены', type: 'success' });
+        this.showInfoMessage('✅ Переводы обновлены');
         await this.updateView();
         
         // Обновляем decorations
@@ -176,7 +175,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             vscode.ConfigurationTarget.Global
         );
         
-        this.sendMessage({ command: 'showMessage', text: `Язык изменен: ${locale}`, type: 'success' });
+        this.showInfoMessage(`Язык изменен: ${locale}`);
         
         if (vscode.window.activeTextEditor) {
             await this.decorationProvider.updateDecorations(vscode.window.activeTextEditor);
@@ -192,9 +191,9 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         
         const token = await this.storageService.getToken();
         if (token) {
-            this.sendMessage({ command: 'showMessage', text: '⏳ Загрузка переводов...', type: 'info' });
-            await this.loadAllLocales(token);
-            this.sendMessage({ command: 'showMessage', text: '✅ Переводы обновлены', type: 'success' });
+            this.showInfoMessage('⏳ Загрузка переводов...');
+            await this.loadAllLocales();
+            this.showInfoMessage('✅ Переводы обновлены');
         }
         
         await this.updateView();
@@ -216,7 +215,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
 
         try {
-            const response = await this.apiService.fetchProjects(token);
+            const response = await this.apiService.fetchProjects();
             this.sendMessage({
                 command: 'projectsResponse',
                 projects: response.data
@@ -232,21 +231,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async handleCreateKey(key: string, translations: { ru: string; en: string; uz: string }): Promise<void> {
         if (!key || !key.trim()) {
-            this.sendMessage({ 
-                command: 'createKeyResult', 
-                text: '❌ Введите ключ', 
-                type: 'error' 
-            });
+            vscode.window.showErrorMessage('❌ Введите ключ');
             return;
         }
 
         const token = await this.storageService.getToken();
         if (!token) {
-            this.sendMessage({ 
-                command: 'createKeyResult', 
-                text: '❌ Нет токена', 
-                type: 'error' 
-            });
+            vscode.window.showErrorMessage('❌ Нет токена. Выполняется выход...');
+            await this.handleLogout();
             return;
         }
 
@@ -261,7 +253,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 }
             };
 
-            const response = await this.apiService.createKey(token, request, projectKey);
+            const response = await this.apiService.createKey(undefined, request, projectKey);
             
             // Добавляем ключ в кеш
             this.cacheService.addKey(response.data.key, response.data.translations);
@@ -277,11 +269,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 }
             });
             
-            this.sendMessage({ 
-                command: 'createKeyResult', 
-                text: `✅ Ключ "${response.data.key}" создан`, 
-                type: 'success' 
-            });
+            this.showInfoMessage(`✅ Ключ "${response.data.key}" создан`);
             
             // Обновляем статистику
             await this.updateView();
@@ -291,19 +279,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 await this.decorationProvider.updateDecorations(vscode.window.activeTextEditor);
             }
         } catch (error: any) {
-            this.sendMessage({ 
-                command: 'createKeyResult', 
-                text: `❌ ${error.message}`, 
-                type: 'error' 
-            });
+            const errorMessage = error.message || 'Ошибка создания ключа';
+            vscode.window.showErrorMessage(`❌ ${errorMessage}`);
+            
+            // Если ошибка связана с авторизацией (401 или токен невалиден), выполняем logout
+            if (errorMessage.includes('401') || errorMessage.includes('токен') || errorMessage.includes('авторизац')) {
+                await this.handleLogout();
+            }
         }
     }
 
-    private async loadAllLocales(token: string): Promise<void> {
+    private async loadAllLocales(): Promise<void> {
         const projectKey = this.getProjectKey();
         const promises = SUPPORTED_LOCALES.map(async (locale) => {
             try {
-                const locales = await this.apiService.fetchLocales(token, locale, projectKey);
+                const locales = await this.apiService.fetchLocales(undefined, locale, projectKey);
                 this.cacheService.set(locale, locales);
             } catch (error) {
                 console.error(`Failed to fetch ${locale}:`, error);
@@ -328,7 +318,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             
             // Если нет всех локалей, загружаем их
             if (!hasAllLocales) {
-                await this.loadAllLocales(token);
+                await this.loadAllLocales();
             }
             
             const stats = this.getStats();
@@ -355,7 +345,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         // Загружаем проекты и отправляем текущий проект
         if (token) {
             try {
-                const projectsResponse = await this.apiService.fetchProjects(token);
+                const projectsResponse = await this.apiService.fetchProjects();
                 const currentProject = projectsResponse.data.find(p => p.key === projectKey);
                 this.sendMessage({
                     command: 'updateProject',
@@ -384,21 +374,39 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async handleSearchKeys(query: string, pageNumber: number = 1): Promise<void> {
         const token = await this.storageService.getToken();
+        const pageSize = 10;
+
+        // Если нет токена, ищем в локальном кеше
         if (!token) {
+            const cacheResults = this.cacheService.searchKeys(query);
+            const totalCount = cacheResults.length;
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const startIndex = (pageNumber - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedResults = cacheResults.slice(startIndex, endIndex);
+
             this.sendMessage({
                 command: 'searchResults',
-                results: [],
-                totalCount: 0,
-                totalPages: 0,
-                currentPage: 1,
+                results: paginatedResults.map(item => ({
+                    key: item.key,
+                    translations: {
+                        ru: item.translations.ru || '',
+                        en: item.translations.en || '',
+                        uz: item.translations.uz || ''
+                    }
+                })),
+                totalCount: totalCount,
+                totalPages: totalPages,
+                currentPage: pageNumber,
                 query: query
             });
             return;
         }
 
+        // Если есть токен, используем API
         try {
             const projectKey = this.getProjectKey();
-            const response = await this.apiService.searchKeys(token, query, projectKey, pageNumber, 10);
+            const response = await this.apiService.searchKeys(undefined, query, projectKey, pageNumber, pageSize);
             
             this.sendMessage({
                 command: 'searchResults',
@@ -417,12 +425,27 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             });
         } catch (error: any) {
             console.error('Search error:', error);
+            // При ошибке API пробуем поискать в кеше
+            const cacheResults = this.cacheService.searchKeys(query);
+            const totalCount = cacheResults.length;
+            const totalPages = Math.ceil(totalCount / pageSize);
+            const startIndex = (pageNumber - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedResults = cacheResults.slice(startIndex, endIndex);
+
             this.sendMessage({
                 command: 'searchResults',
-                results: [],
-                totalCount: 0,
-                totalPages: 0,
-                currentPage: 1,
+                results: paginatedResults.map(item => ({
+                    key: item.key,
+                    translations: {
+                        ru: item.translations.ru || '',
+                        en: item.translations.en || '',
+                        uz: item.translations.uz || ''
+                    }
+                })),
+                totalCount: totalCount,
+                totalPages: totalPages,
+                currentPage: pageNumber,
                 query: query
             });
         }
@@ -431,11 +454,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     private async handleUpdateKey(key: string, translations: { ru: string; en: string; uz: string }): Promise<void> {
         const token = await this.storageService.getToken();
         if (!token) {
-            this.sendMessage({ 
-                command: 'updateKeyResult', 
-                text: '❌ Нет токена', 
-                type: 'error' 
-            });
+            vscode.window.showErrorMessage('❌ Нет токена. Выполняется выход...');
+            await this.handleLogout();
             return;
         }
 
@@ -450,16 +470,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 }
             };
 
-            const response = await this.apiService.updateKey(token, request, projectKey);
+            const response = await this.apiService.updateKey(undefined, request, projectKey);
             
             // Обновляем ключ в кеше
             this.cacheService.updateKey(response.data.key, response.data.translations);
             
-            this.sendMessage({ 
-                command: 'updateKeyResult', 
-                text: `✅ Ключ "${response.data.key}" обновлен`, 
-                type: 'success' 
-            });
+            this.showInfoMessage(`✅ Ключ "${response.data.key}" обновлен`);
+            
+            // Закрываем модалку редактирования
+            this.sendMessage({ command: 'closeEditModal' });
             
             // Обновляем статистику
             await this.updateView();
@@ -472,11 +491,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             // Перезапускаем поиск
             this.sendMessage({ command: 'refreshSearch' });
         } catch (error: any) {
-            this.sendMessage({ 
-                command: 'updateKeyResult', 
-                text: `❌ ${error.message}`, 
-                type: 'error' 
-            });
+            const errorMessage = error.message || 'Ошибка обновления ключа';
+            vscode.window.showErrorMessage(`❌ ${errorMessage}`);
+            
+            // Если ошибка связана с авторизацией (401 или токен невалиден), выполняем logout
+            if (errorMessage.includes('401') || errorMessage.includes('токен') || errorMessage.includes('авторизац')) {
+                await this.handleLogout();
+            }
         }
     }
 
@@ -501,24 +522,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
 
         const token = await this.storageService.getToken();
-        if (!token) {
-            this.sendMessage({
-                command: 'translatedSearchResults',
-                results: []
-            });
-            return;
-        }
-
         const locale = this.getLocaleFromConfig();
         
-        // Загружаем локали если их еще нет
+        // Загружаем локали если их еще нет (только если есть токен)
         if (!this.cacheService.has(locale)) {
-            try {
-                const projectKey = this.getProjectKey();
-                const locales = await this.apiService.fetchLocales(token, locale, projectKey);
-                this.cacheService.set(locale, locales);
-            } catch (err) {
-                console.error('Failed to fetch locales:', err);
+            if (token) {
+                try {
+                    const projectKey = this.getProjectKey();
+                    const locales = await this.apiService.fetchLocales(undefined, locale, projectKey);
+                    this.cacheService.set(locale, locales);
+                } catch (err) {
+                    console.error('Failed to fetch locales:', err);
+                    // Продолжаем поиск в кеше, если он есть для других локалей
+                }
+            } else {
+                // Если нет токена и нет локалей в кеше, возвращаем пустой результат
                 this.sendMessage({
                     command: 'translatedSearchResults',
                     results: []
@@ -559,20 +577,62 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
             // Шаг 2: Определяем путь для поиска (по умолчанию src)
             const searchPathNormalized = (searchPath || 'src').trim();
-            const searchPattern = searchPathNormalized 
-                ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
-                : '**/*.{js,ts,jsx,tsx,vue,html}';
+            const workspaceFolders = vscode.workspace.workspaceFolders || [];
             
-            // Ищем по файлам в указанной директории
-            // Увеличиваем лимит и исключаем больше ненужных директорий
-            const files = await vscode.workspace.findFiles(
-                searchPattern,
-                '**/{node_modules,dist,build,.git,.next,.nuxt,.output}/**',
-                5000
-            );
+            // Собираем файлы из всех подходящих workspace folders
+            const allFiles: vscode.Uri[] = [];
+            const excludePattern = '**/{node_modules,dist,build,.git,.next,.nuxt,.output}/**';
+            
+            if (workspaceFolders.length === 0) {
+                // Если нет workspace folders, используем стандартный поиск
+                const searchPattern = searchPathNormalized 
+                    ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
+                    : '**/*.{js,ts,jsx,tsx,vue,html}';
+                const files = await vscode.workspace.findFiles(searchPattern, excludePattern, 5000);
+                allFiles.push(...files);
+            } else {
+                // Для каждого workspace folder определяем правильный паттерн поиска
+                for (const folder of workspaceFolders) {
+                    const folderPath = folder.uri.fsPath.replace(/\\/g, '/').replace(/\/$/, '');
+                    const searchPathNormalizedSlash = searchPathNormalized.replace(/\\/g, '/');
+                    
+                    // Проверяем, является ли указанный путь частью пути workspace folder
+                    // Например, если workspace folder = /path/to/swift, а searchPath = src/projects/swift
+                    // то нужно искать в родительском workspace folder
+                    
+                    // Также проверяем, не является ли сам workspace folder уже нужным путем
+                    const folderName = folder.name;
+                    const folderPathParts = folderPath.split('/');
+                    const searchPathParts = searchPathNormalizedSlash.split('/');
+                    
+                    let searchPattern: string;
+                    
+                    // Если имя workspace folder совпадает с последней частью пути поиска
+                    // и путь поиска содержит это имя, то ищем в корне этого workspace folder
+                    if (searchPathParts.length > 0 && searchPathParts[searchPathParts.length - 1] === folderName) {
+                        // Ищем в корне этого workspace folder
+                        searchPattern = '**/*.{js,ts,jsx,tsx,vue,html}';
+                    } else {
+                        // Ищем относительно workspace folder
+                        searchPattern = searchPathNormalized 
+                            ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
+                            : '**/*.{js,ts,jsx,tsx,vue,html}';
+                    }
+                    
+                    // Ищем файлы в этом workspace folder
+                    const files = await vscode.workspace.findFiles(
+                        new vscode.RelativePattern(folder, searchPattern),
+                        new vscode.RelativePattern(folder, excludePattern),
+                        5000
+                    );
+                    
+                    allFiles.push(...files);
+                }
+            }
+            
+            const files = allFiles;
 
             // Шаг 3: Ищем все ключи i18n в файлах и проверяем, есть ли они в списке подходящих
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             const batchSize = 20;
             
             // Используем тот же паттерн, что и в DecorationProvider для консистентности
@@ -617,10 +677,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                                         preview = preview.substring(0, 77) + '...';
                                     }
                                     
-                                    // Получаем относительный путь
-                                    const filePath = workspaceFolder 
-                                        ? vscode.workspace.asRelativePath(fileUri)
-                                        : fileUri.fsPath;
+                                    // Получаем относительный путь относительно правильного workspace folder
+                                    const filePath = this.getRelativePath(fileUri);
                                     
                                     fileResults.push({
                                         filePath,
@@ -673,14 +731,57 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async handleOpenFileAtLine(filePath: string, line: number): Promise<void> {
         try {
-            // Находим файл по относительному пути
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
                 vscode.window.showErrorMessage('Не найден workspace');
                 return;
             }
 
-            const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+            // Ищем файл во всех workspace folders
+            let fileUri: vscode.Uri | null = null;
+            
+            // Сначала пробуем найти файл по относительному пути в каждом workspace folder
+            for (const folder of workspaceFolders) {
+                const candidateUri = vscode.Uri.joinPath(folder.uri, filePath);
+                try {
+                    await vscode.workspace.fs.stat(candidateUri);
+                    fileUri = candidateUri;
+                    break;
+                } catch {
+                    // Файл не найден в этом workspace folder, пробуем следующий
+                }
+            }
+
+            // Если не нашли и путь начинается с имени workspace folder, пробуем удалить префикс
+            if (!fileUri && workspaceFolders.length > 1) {
+                for (const folder of workspaceFolders) {
+                    const folderName = folder.name;
+                    if (filePath.startsWith(folderName + '/')) {
+                        const pathWithoutPrefix = filePath.substring(folderName.length + 1);
+                        const candidateUri = vscode.Uri.joinPath(folder.uri, pathWithoutPrefix);
+                        try {
+                            await vscode.workspace.fs.stat(candidateUri);
+                            fileUri = candidateUri;
+                            break;
+                        } catch {
+                            // Продолжаем поиск
+                        }
+                    }
+                }
+            }
+
+            if (!fileUri) {
+                // Если не нашли по относительному пути, пробуем найти по абсолютному пути
+                // (на случай если путь был сохранен как абсолютный)
+                try {
+                    fileUri = vscode.Uri.file(filePath);
+                    await vscode.workspace.fs.stat(fileUri);
+                } catch {
+                    vscode.window.showErrorMessage(`Файл не найден: ${filePath}`);
+                    return;
+                }
+            }
+
             const document = await vscode.workspace.openTextDocument(fileUri);
             const editor = await vscode.window.showTextDocument(document);
             
@@ -691,6 +792,32 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         } catch (error: any) {
             vscode.window.showErrorMessage(`Ошибка при открытии файла: ${error.message}`);
         }
+    }
+
+    private getRelativePath(fileUri: vscode.Uri): string {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            return fileUri.fsPath;
+        }
+
+        // Находим workspace folder, которому принадлежит файл
+        for (const folder of workspaceFolders) {
+            const folderPath = folder.uri.fsPath;
+            const filePath = fileUri.fsPath;
+            
+            // Нормализуем пути для корректного сравнения
+            const normalizedFolderPath = folderPath.replace(/\\/g, '/').replace(/\/$/, '');
+            const normalizedFilePath = filePath.replace(/\\/g, '/');
+            
+            if (normalizedFilePath.startsWith(normalizedFolderPath + '/') || normalizedFilePath === normalizedFolderPath) {
+                // Вычисляем относительный путь вручную для корректной работы с workspace
+                const relativePath = normalizedFilePath.substring(normalizedFolderPath.length + 1);
+                return relativePath;
+            }
+        }
+
+        // Если не нашли подходящий workspace folder, используем asRelativePath как fallback
+        return vscode.workspace.asRelativePath(fileUri, false);
     }
 
     private sendMessage(message: any): void {

@@ -421,7 +421,7 @@ export function getSidebarHtml(): string {
     </div>
     
     <!-- Настройки -->
-    <div id="settingsSection" class="section collapsed">
+    <div id="settingsSection" class="section hidden collapsed">
         <div class="section-title">🎨 Настройки</div>
         <div class="section-content">
             <div class="setting">
@@ -442,7 +442,7 @@ export function getSidebarHtml(): string {
     </div>
     
     <!-- Поиск ключей -->
-    <div id="searchSection" class="section hidden collapsed">
+    <div id="searchSection" class="section collapsed">
         <div class="section-title">🔍 Поиск ключей</div>
         <div class="section-content">
             <input id="searchInput" type="text" placeholder="Введите ключ для поиска..." />
@@ -533,6 +533,7 @@ export function getSidebarHtml(): string {
         const refreshBtn = document.getElementById('refreshBtn');
         const toggleDecorationsBtn = document.getElementById('toggleDecorationsBtn');
         const logoutBtn = document.getElementById('logoutBtn');
+        const settingsSection = document.getElementById('settingsSection');
         const localeSelect = document.getElementById('localeSelect');
         const projectSelect = document.getElementById('projectSelect');
         const projectNameText = document.getElementById('projectNameText');
@@ -758,9 +759,6 @@ export function getSidebarHtml(): string {
                 case 'updateStats':
                     updateStats(message.stats);
                     break;
-                case 'showMessage':
-                    showMessage(message.text, message.type);
-                    break;
                 case 'updateLocale':
                     localeSelect.value = message.locale;
                     break;
@@ -779,9 +777,6 @@ export function getSidebarHtml(): string {
                         projectSelect.value = currentProjectKey;
                     }
                     break;
-                case 'createKeyResult':
-                    showCreateKeyMessage(message.text, message.type);
-                    break;
                 case 'searchResults':
                     showSearchResults(
                         message.results || [],
@@ -791,11 +786,8 @@ export function getSidebarHtml(): string {
                         message.query || ''
                     );
                     break;
-                case 'updateKeyResult':
-                    showMessage(message.text, message.type);
-                    if (message.type === 'success') {
-                        editModal.classList.add('hidden');
-                    }
+                case 'closeEditModal':
+                    editModal.classList.add('hidden');
                     break;
                 case 'refreshSearch':
                     // Перезапускаем поиск с текущим запросом
@@ -979,6 +971,7 @@ export function getSidebarHtml(): string {
             if (isAuthenticated) {
                 loginSection.classList.add('hidden');
                 controlsSection.classList.remove('hidden');
+                settingsSection.classList.remove('hidden');
                 searchSection.classList.remove('hidden');
                 translatedSearchSection.classList.remove('hidden');
                 createKeySection.classList.remove('hidden');
@@ -986,6 +979,7 @@ export function getSidebarHtml(): string {
             } else {
                 loginSection.classList.remove('hidden');
                 controlsSection.classList.add('hidden');
+                settingsSection.classList.add('hidden');
                 searchSection.classList.add('hidden');
                 translatedSearchSection.classList.add('hidden');
                 createKeySection.classList.add('hidden');
@@ -1117,6 +1111,8 @@ export function getSidebarHtml(): string {
                 projectNameText.textContent = '—';
             }
         }
+        
+        // Секции будут показаны/скрыты в зависимости от статуса авторизации через updateAuthStatus
         
         // Запрашиваем начальное состояние
         vscode.postMessage({ command: 'init' });

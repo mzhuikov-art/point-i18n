@@ -67,7 +67,7 @@ export class DecorationProvider {
         if (!this.cacheService.has(locale)) {
             try {
                 const projectKey = this.getProjectKey();
-                const locales = await this.apiService.fetchLocales(token, locale, projectKey);
+                const locales = await this.apiService.fetchLocales(undefined, locale, projectKey);
                 this.cacheService.set(locale, locales);
             } catch (err) {
                 console.error('Failed to fetch locales:', err);
