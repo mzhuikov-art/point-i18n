@@ -1,5 +1,4 @@
-export * from './storage.service';
-export * from './config.service';
-export * from './editor.service';
-export * from './window.service';
-
+export { WebStormStorageService } from './storage.service';
+export { WebStormConfigService } from './config.service';
+export { WebStormEditorService } from './editor.service';
+export { WebStormWindowService } from './window.service';

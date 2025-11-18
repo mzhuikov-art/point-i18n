@@ -21,9 +21,15 @@ point-i18n/
 │   │   │   ├── views/         # Адаптеры для shared views (используют shared/views)
 │   │   │   └── extension.ts   # Точка входа для VSCode
 │   │   │
-│   │   └── webstorm/          # Реализация для WebStorm (в разработке)
+│   │   └── webstorm/          # Реализация для WebStorm
 │   │       ├── services/       # Реализации интерфейсов для WebStorm
-│   │       └── extension.ts   # Точка входа для WebStorm
+│   │       ├── providers/      # Провайдеры для WebStorm (Hover, LineMarker)
+│   │       ├── actions/        # Actions для команд плагина
+│   │       ├── toolwindow/     # ToolWindow для sidebar
+│   │       ├── resources/      # Ресурсы плагина (plugin.xml)
+│   │       ├── extension.ts    # Точка входа для WebStorm
+│   │       ├── build.gradle.kts # Конфигурация сборки Gradle
+│   │       └── tsconfig.json   # Конфигурация TypeScript
 │   │
 │   └── [старые файлы]         # Старый код (можно удалить после миграции)
 ```
