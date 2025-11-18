@@ -10,9 +10,9 @@ import { SidebarViewProvider } from './views/sidebar.view';
 import { getLoginHtml } from './views/login.html';
 
 export function activate(ctx: vscode.ExtensionContext): void {
-    const apiService = new ApiService();
-    const cacheService = new CacheService();
     const storageService = new StorageService(ctx);
+    const apiService = new ApiService(storageService);
+    const cacheService = new CacheService();
 
     // Регистрируем провайдер для виртуальных документов с переводами
     const translatedContentProvider = new TranslatedContentProvider(
@@ -83,6 +83,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
         })
     );
 
+    // Проверяем токен при старте приложения
+    checkTokenOnStartup(apiService, storageService);
+
     // Инициализируем decorations для текущего редактора
     if (vscode.window.activeTextEditor) {
         decorationProvider.updateDecorations(vscode.window.activeTextEditor);
@@ -121,7 +124,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
                 return;
             }
 
-            await fetchLocalesAndCache(apiService, cacheService, token);
+            await fetchLocalesAndCache(apiService, cacheService);
             vscode.window.showInformationMessage('I18n: locales fetched to memory cache.');
             
             // Обновляем decorations после загрузки локалей
@@ -414,18 +417,18 @@ async function handleLogin(
     translatedContentProvider: TranslatedContentProvider
 ): Promise<void> {
     try {
-        const token = await apiService.authenticate(msg.login, msg.password);
+        const authResponse = await apiService.authenticate(msg.login, msg.password);
         
-        if (!token) {
+        if (!authResponse.access_token) {
             panel.webview.postMessage({ status: 'error', message: 'Auth failed' });
             return;
         }
 
-        await storageService.saveToken(token);
-          panel.webview.postMessage({ status: 'ok' });
-          vscode.window.showInformationMessage('I18n token saved.');
+        await storageService.saveTokens(authResponse);
+        panel.webview.postMessage({ status: 'ok' });
+        vscode.window.showInformationMessage('I18n token saved.');
         
-        await fetchLocalesAndCache(apiService, cacheService, token);
+        await fetchLocalesAndCache(apiService, cacheService);
         
         // Обновляем decorations после логина
         if (vscode.window.activeTextEditor) {
@@ -464,7 +467,7 @@ async function handleFetchNow(
         return;
     }
 
-    await fetchLocalesAndCache(apiService, cacheService, token);
+    await fetchLocalesAndCache(apiService, cacheService);
     vscode.window.showInformationMessage('Locales fetched into memory.');
     
     // Обновляем decorations после загрузки
@@ -478,14 +481,13 @@ async function handleFetchNow(
 
 async function fetchLocalesAndCache(
     apiService: ApiService,
-    cacheService: CacheService,
-    token: string
+    cacheService: CacheService
 ): Promise<void> {
     const projectKey = vscode.workspace.getConfiguration('i18nRemote').get<string>('projectKey') || 'point-frontend';
     // Загружаем все локали параллельно
     const promises = SUPPORTED_LOCALES.map(async (locale) => {
         try {
-            const locales = await apiService.fetchLocales(token, locale, projectKey);
+            const locales = await apiService.fetchLocales(undefined, locale, projectKey);
             cacheService.set(locale, locales);
         } catch (error) {
             console.error(`Failed to fetch ${locale}:`, error);
@@ -493,6 +495,34 @@ async function fetchLocalesAndCache(
     });
     
     await Promise.all(promises);
+}
+
+async function checkTokenOnStartup(apiService: ApiService, storageService: StorageService): Promise<void> {
+    const refreshToken = await storageService.getRefreshToken();
+    if (!refreshToken) {
+        return;
+    }
+
+    try {
+        const accessToken = await storageService.getAccessToken();
+        if (!accessToken) {
+            await storageService.deleteTokens();
+            return;
+        }
+
+        await apiService.getUserInfo(accessToken);
+    } catch (error: any) {
+        if (error.message && error.message.includes('401')) {
+            try {
+                const authResponse = await apiService.refreshToken(refreshToken);
+                await storageService.saveTokens(authResponse);
+            } catch (refreshError) {
+                await storageService.deleteTokens();
+            }
+        } else {
+            await storageService.deleteTokens();
+        }
+    }
 }
 
 export function deactivate(): void {}

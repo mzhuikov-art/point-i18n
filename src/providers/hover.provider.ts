@@ -31,7 +31,7 @@ export class HoverProvider implements vscode.HoverProvider {
         const locale = this.getLocaleFromConfig();
         
         // Загружаем все локали если нужно
-        await this.ensureAllLocalesLoaded(token);
+        await this.ensureAllLocalesLoaded();
 
         // Создаем таблицу с переводами
         const markdown = this.createTranslationTable(key);
@@ -43,11 +43,11 @@ export class HoverProvider implements vscode.HoverProvider {
         return new vscode.Hover(markdown, range);
     }
 
-    private async ensureAllLocalesLoaded(token: string): Promise<void> {
+    private async ensureAllLocalesLoaded(): Promise<void> {
         for (const locale of SUPPORTED_LOCALES) {
             if (!this.cacheService.has(locale)) {
                 try {
-                    await this.fetchAndCacheLocales(token, locale);
+                    await this.fetchAndCacheLocales(locale);
                 } catch (error) {
                     console.error(`Failed to load ${locale}:`, error);
                 }
@@ -113,9 +113,9 @@ export class HoverProvider implements vscode.HoverProvider {
         return vscode.workspace.getConfiguration('i18nRemote').get<string>('projectKey') || 'point-frontend';
     }
 
-    private async fetchAndCacheLocales(token: string, locale: string): Promise<void> {
+    private async fetchAndCacheLocales(locale: string): Promise<void> {
         const projectKey = this.getProjectKey();
-        const locales = await this.apiService.fetchLocales(token, locale, projectKey);
+        const locales = await this.apiService.fetchLocales(undefined, locale, projectKey);
         this.cacheService.set(locale, locales);
     }
 }
