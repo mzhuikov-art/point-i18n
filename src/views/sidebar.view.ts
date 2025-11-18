@@ -577,20 +577,62 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
             // Шаг 2: Определяем путь для поиска (по умолчанию src)
             const searchPathNormalized = (searchPath || 'src').trim();
-            const searchPattern = searchPathNormalized 
-                ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
-                : '**/*.{js,ts,jsx,tsx,vue,html}';
+            const workspaceFolders = vscode.workspace.workspaceFolders || [];
             
-            // Ищем по файлам в указанной директории
-            // Увеличиваем лимит и исключаем больше ненужных директорий
-            const files = await vscode.workspace.findFiles(
-                searchPattern,
-                '**/{node_modules,dist,build,.git,.next,.nuxt,.output}/**',
-                5000
-            );
+            // Собираем файлы из всех подходящих workspace folders
+            const allFiles: vscode.Uri[] = [];
+            const excludePattern = '**/{node_modules,dist,build,.git,.next,.nuxt,.output}/**';
+            
+            if (workspaceFolders.length === 0) {
+                // Если нет workspace folders, используем стандартный поиск
+                const searchPattern = searchPathNormalized 
+                    ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
+                    : '**/*.{js,ts,jsx,tsx,vue,html}';
+                const files = await vscode.workspace.findFiles(searchPattern, excludePattern, 5000);
+                allFiles.push(...files);
+            } else {
+                // Для каждого workspace folder определяем правильный паттерн поиска
+                for (const folder of workspaceFolders) {
+                    const folderPath = folder.uri.fsPath.replace(/\\/g, '/').replace(/\/$/, '');
+                    const searchPathNormalizedSlash = searchPathNormalized.replace(/\\/g, '/');
+                    
+                    // Проверяем, является ли указанный путь частью пути workspace folder
+                    // Например, если workspace folder = /path/to/swift, а searchPath = src/projects/swift
+                    // то нужно искать в родительском workspace folder
+                    
+                    // Также проверяем, не является ли сам workspace folder уже нужным путем
+                    const folderName = folder.name;
+                    const folderPathParts = folderPath.split('/');
+                    const searchPathParts = searchPathNormalizedSlash.split('/');
+                    
+                    let searchPattern: string;
+                    
+                    // Если имя workspace folder совпадает с последней частью пути поиска
+                    // и путь поиска содержит это имя, то ищем в корне этого workspace folder
+                    if (searchPathParts.length > 0 && searchPathParts[searchPathParts.length - 1] === folderName) {
+                        // Ищем в корне этого workspace folder
+                        searchPattern = '**/*.{js,ts,jsx,tsx,vue,html}';
+                    } else {
+                        // Ищем относительно workspace folder
+                        searchPattern = searchPathNormalized 
+                            ? `${searchPathNormalized}/**/*.{js,ts,jsx,tsx,vue,html}`
+                            : '**/*.{js,ts,jsx,tsx,vue,html}';
+                    }
+                    
+                    // Ищем файлы в этом workspace folder
+                    const files = await vscode.workspace.findFiles(
+                        new vscode.RelativePattern(folder, searchPattern),
+                        new vscode.RelativePattern(folder, excludePattern),
+                        5000
+                    );
+                    
+                    allFiles.push(...files);
+                }
+            }
+            
+            const files = allFiles;
 
             // Шаг 3: Ищем все ключи i18n в файлах и проверяем, есть ли они в списке подходящих
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             const batchSize = 20;
             
             // Используем тот же паттерн, что и в DecorationProvider для консистентности
@@ -635,10 +677,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                                         preview = preview.substring(0, 77) + '...';
                                     }
                                     
-                                    // Получаем относительный путь
-                                    const filePath = workspaceFolder 
-                                        ? vscode.workspace.asRelativePath(fileUri)
-                                        : fileUri.fsPath;
+                                    // Получаем относительный путь относительно правильного workspace folder
+                                    const filePath = this.getRelativePath(fileUri);
                                     
                                     fileResults.push({
                                         filePath,
@@ -691,14 +731,57 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async handleOpenFileAtLine(filePath: string, line: number): Promise<void> {
         try {
-            // Находим файл по относительному пути
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
                 vscode.window.showErrorMessage('Не найден workspace');
                 return;
             }
 
-            const fileUri = vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+            // Ищем файл во всех workspace folders
+            let fileUri: vscode.Uri | null = null;
+            
+            // Сначала пробуем найти файл по относительному пути в каждом workspace folder
+            for (const folder of workspaceFolders) {
+                const candidateUri = vscode.Uri.joinPath(folder.uri, filePath);
+                try {
+                    await vscode.workspace.fs.stat(candidateUri);
+                    fileUri = candidateUri;
+                    break;
+                } catch {
+                    // Файл не найден в этом workspace folder, пробуем следующий
+                }
+            }
+
+            // Если не нашли и путь начинается с имени workspace folder, пробуем удалить префикс
+            if (!fileUri && workspaceFolders.length > 1) {
+                for (const folder of workspaceFolders) {
+                    const folderName = folder.name;
+                    if (filePath.startsWith(folderName + '/')) {
+                        const pathWithoutPrefix = filePath.substring(folderName.length + 1);
+                        const candidateUri = vscode.Uri.joinPath(folder.uri, pathWithoutPrefix);
+                        try {
+                            await vscode.workspace.fs.stat(candidateUri);
+                            fileUri = candidateUri;
+                            break;
+                        } catch {
+                            // Продолжаем поиск
+                        }
+                    }
+                }
+            }
+
+            if (!fileUri) {
+                // Если не нашли по относительному пути, пробуем найти по абсолютному пути
+                // (на случай если путь был сохранен как абсолютный)
+                try {
+                    fileUri = vscode.Uri.file(filePath);
+                    await vscode.workspace.fs.stat(fileUri);
+                } catch {
+                    vscode.window.showErrorMessage(`Файл не найден: ${filePath}`);
+                    return;
+                }
+            }
+
             const document = await vscode.workspace.openTextDocument(fileUri);
             const editor = await vscode.window.showTextDocument(document);
             
@@ -709,6 +792,32 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         } catch (error: any) {
             vscode.window.showErrorMessage(`Ошибка при открытии файла: ${error.message}`);
         }
+    }
+
+    private getRelativePath(fileUri: vscode.Uri): string {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            return fileUri.fsPath;
+        }
+
+        // Находим workspace folder, которому принадлежит файл
+        for (const folder of workspaceFolders) {
+            const folderPath = folder.uri.fsPath;
+            const filePath = fileUri.fsPath;
+            
+            // Нормализуем пути для корректного сравнения
+            const normalizedFolderPath = folderPath.replace(/\\/g, '/').replace(/\/$/, '');
+            const normalizedFilePath = filePath.replace(/\\/g, '/');
+            
+            if (normalizedFilePath.startsWith(normalizedFolderPath + '/') || normalizedFilePath === normalizedFolderPath) {
+                // Вычисляем относительный путь вручную для корректной работы с workspace
+                const relativePath = normalizedFilePath.substring(normalizedFolderPath.length + 1);
+                return relativePath;
+            }
+        }
+
+        // Если не нашли подходящий workspace folder, используем asRelativePath как fallback
+        return vscode.workspace.asRelativePath(fileUri, false);
     }
 
     private sendMessage(message: any): void {
