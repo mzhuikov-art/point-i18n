@@ -78,6 +78,17 @@ tasks {
     // Зависимость: сборка TypeScript перед подготовкой плагина
     buildPlugin {
         dependsOn("buildTypeScript")
+        doLast {
+            // Копируем собранный плагин в корневую папку проекта
+            val pluginZip = file("${layout.buildDirectory.get()}/distributions/point-i18n-webstorm-${version}.zip")
+            val rootDir = file("${projectDir}/../../..")
+            val targetFile = file("${rootDir}/point-i18n-webstorm-${version}.zip")
+            
+            if (pluginZip.exists()) {
+                pluginZip.copyTo(targetFile, overwrite = true)
+                println("Plugin copied to: ${targetFile.absolutePath}")
+            }
+        }
     }
 
     patchPluginXml {

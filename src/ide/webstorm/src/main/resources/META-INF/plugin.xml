@@ -5,8 +5,9 @@
     <vendor email="m.zhuikov@kapitalbank.uz" url="https://git.kapitalbank.uz/m.zhuikov/point-i18n">maksim-zhuikov</vendor>
 
     <description><![CDATA[
-        Расширение для работы с локализацией в проектах Point.
-        Поддерживает синхронизацию переводов, поиск ключей и отображение переводов в редакторе.
+        Point I18n extension for working with localization in Point projects.
+        Supports translation synchronization, key search, and inline translation display in the editor.
+        Provides hover tooltips, inline hints, and a comprehensive tool window for managing i18n keys.
     ]]></description>
 
     <change-notes><![CDATA[
