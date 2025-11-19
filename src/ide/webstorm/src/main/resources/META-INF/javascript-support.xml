@@ -1,0 +1,7 @@
+<idea-plugin>
+    <!-- JavaScript support extensions -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Провайдеры уже зарегистрированы в основном plugin.xml -->
+    </extensions>
+</idea-plugin>
+

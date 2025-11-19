@@ -1,0 +1,76 @@
+<idea-plugin>
+    <id>com.point.i18n</id>
+    <name>Point I18n</name>
+    <version>1.1.6</version>
+    <vendor email="m.zhuikov@kapitalbank.uz" url="https://git.kapitalbank.uz/m.zhuikov/point-i18n">maksim-zhuikov</vendor>
+
+    <description><![CDATA[
+        Point I18n extension for working with localization in Point projects.
+        Supports translation synchronization, key search, and inline translation display in the editor.
+        Provides hover tooltips, inline hints, and a comprehensive tool window for managing i18n keys.
+    ]]></description>
+
+    <change-notes><![CDATA[
+        Initial release with support for WebStorm.
+    ]]></change-notes>
+
+    <idea-version since-build="233" until-build="253.*"/>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends optional="true" config-file="javascript-support.xml">JavaScript</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Application Component -->
+        <applicationService serviceImplementation="com.point.i18n.webstorm.PointI18nApplicationService"/>
+
+        <!-- Tool Window -->
+        <toolWindow id="PointI18n" secondary="true" anchor="right" 
+                    icon="/icons/globe.svg" 
+                    factoryClass="com.point.i18n.webstorm.toolwindow.PointI18nToolWindowFactory"/>
+
+        <!-- Documentation Provider for hover - регистрируем для JavaScript/TypeScript/Vue -->
+        <lang.documentationProvider language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nHoverProvider"/>
+        <lang.documentationProvider language="TypeScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nHoverProvider"/>
+        <lang.documentationProvider language="Vue" implementationClass="com.point.i18n.webstorm.providers.PointI18nHoverProvider"/>
+        <lang.documentationProvider language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nHoverProvider"/>
+        
+        <!-- Line Marker Provider for inline decorations - регистрируем для JavaScript/TypeScript/Vue -->
+        <codeInsight.lineMarkerProvider language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="TypeScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="Vue" implementationClass="com.point.i18n.webstorm.providers.PointI18nLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nLineMarkerProvider"/>
+        
+        <!-- Inlay Hints Provider for inline translations - более современный подход -->
+        <codeInsight.inlayProvider language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nInlayHintsProvider"/>
+        <codeInsight.inlayProvider language="TypeScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nInlayHintsProvider"/>
+        <codeInsight.inlayProvider language="Vue" implementationClass="com.point.i18n.webstorm.providers.PointI18nInlayHintsProvider"/>
+        <codeInsight.inlayProvider language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nInlayHintsProvider"/>
+        
+        <!-- Annotator for translation hints above keys -->
+        <!-- Annotator временно отключен, используем только InlayHints -->
+        <!-- <annotator language="JavaScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
+        <annotator language="TypeScript" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
+        <annotator language="Vue" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/>
+        <annotator language="JSX Harmony" implementationClass="com.point.i18n.webstorm.providers.PointI18nAnnotator"/> -->
+    </extensions>
+
+    <actions>
+        <action id="PointI18n.FetchNow" class="com.point.i18n.webstorm.actions.FetchNowAction" text="Fetch Locales Now">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="PointI18n.ToggleDecorations" class="com.point.i18n.webstorm.actions.ToggleDecorationsAction" text="Toggle I18n Decorations">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="PointI18n.ConfigApiBaseUrl" class="com.point.i18n.webstorm.actions.ConfigApiBaseUrlAction" text="Configure API Base URL">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="PointI18n.ConfigLocalizationApiBaseUrl" class="com.point.i18n.webstorm.actions.ConfigLocalizationApiBaseUrlAction" text="Configure Localization API Base URL">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="PointI18n.SearchTranslatedText" class="com.point.i18n.webstorm.actions.SearchTranslatedTextAction" text="Search Translated Text">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
+
