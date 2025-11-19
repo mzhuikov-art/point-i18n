@@ -5,3 +5,25 @@ node_modules/
 .pnpm-store/
 i18n-ally-src/
 .idea/
+
+# WebStorm plugin build artifacts
+src/ide/webstorm/.gradle/
+src/ide/webstorm/build/
+src/ide/webstorm/idea-sandbox/
+src/ide/webstorm/.run/
+src/ide/webstorm/*.iml
+src/ide/webstorm/.idea/
+
+# Gradle
+.gradle/
+build/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+*.iml
+.idea/
+*.ipr
+*.iws
+idea-sandbox/
