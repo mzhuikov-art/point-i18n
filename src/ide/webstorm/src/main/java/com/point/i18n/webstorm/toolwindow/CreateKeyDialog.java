@@ -21,6 +21,8 @@ public class CreateKeyDialog extends JDialog {
     private JTextField ruField;
     private JTextField enField;
     private JTextField uzField;
+    private JButton translateButton;
+    private TranslateService translateService;
     private boolean success = false;
     
     public CreateKeyDialog(Window parent, ApiService apiService, CacheService cacheService, 
@@ -30,6 +32,7 @@ public class CreateKeyDialog extends JDialog {
         this.cacheService = cacheService;
         this.configService = configService;
         this.storageService = storageService;
+        this.translateService = new TranslateService(configService);
         
         initializeUI();
         setLocationRelativeTo(parent);
@@ -51,8 +54,14 @@ public class CreateKeyDialog extends JDialog {
         
         // Translations
         formPanel.add(new JLabel("RU:"));
+        JPanel ruPanel = new JPanel(new BorderLayout(4, 0));
         ruField = new JTextField(30);
-        formPanel.add(ruField);
+        translateButton = new JButton("🌐");
+        translateButton.setToolTipText("Перевести с русского на английский и узбекский");
+        translateButton.addActionListener(e -> performTranslate());
+        ruPanel.add(ruField, BorderLayout.CENTER);
+        ruPanel.add(translateButton, BorderLayout.EAST);
+        formPanel.add(ruPanel);
         formPanel.add(Box.createVerticalStrut(5));
         
         formPanel.add(new JLabel("EN:"));
@@ -103,19 +112,85 @@ public class CreateKeyDialog extends JDialog {
             String projectKey = configService.getProjectKey();
             ApiService.CreateKeyResponse response = apiService.createKey(request, projectKey);
             
+            // Проверяем, что ответ содержит данные
+            if (response == null || response.data == null) {
+                Messages.showErrorDialog("Failed to create key: Invalid response from server", "Point I18n");
+                return;
+            }
+            
             // Add to cache
             Map<String, String> translations = new HashMap<>();
-            translations.put("ru", response.data.translations.ru != null ? response.data.translations.ru : "");
-            translations.put("en", response.data.translations.en != null ? response.data.translations.en : "");
-            translations.put("uz", response.data.translations.uz != null ? response.data.translations.uz : "");
+            translations.put("ru", response.data.translations != null && response.data.translations.ru != null ? response.data.translations.ru : "");
+            translations.put("en", response.data.translations != null && response.data.translations.en != null ? response.data.translations.en : "");
+            translations.put("uz", response.data.translations != null && response.data.translations.uz != null ? response.data.translations.uz : "");
             cacheService.addKey(response.data.key, translations);
             
             success = true;
             Messages.showInfoMessage("Key created successfully!", "Point I18n");
             dispose();
         } catch (Exception ex) {
-            Messages.showErrorDialog("Failed to create key: " + ex.getMessage(), "Point I18n");
+            String errorMessage = ex.getMessage();
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = "Unknown error occurred";
+            }
+            Messages.showErrorDialog("Failed to create key: " + errorMessage, "Point I18n");
         }
+    }
+    
+    private void performTranslate() {
+        String ruText = ruField.getText().trim();
+        if (ruText.isEmpty()) {
+            Messages.showErrorDialog("Введите текст на русском языке", "Point I18n");
+            return;
+        }
+        
+        translateButton.setEnabled(false);
+        translateButton.setText("⏳");
+        
+        // Выполняем перевод в отдельном потоке, чтобы не блокировать UI
+        new Thread(() -> {
+            try {
+                TranslateService.TranslationResult result = translateService.translateToEnAndUz(ruText);
+                
+                // Обновляем UI в EDT
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    enField.setText(result.en);
+                    uzField.setText(result.uz);
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                });
+            } catch (IllegalStateException e) {
+                // API ключ не настроен
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                    int option = Messages.showYesNoDialog(
+                        "DeepL API ключ не настроен. Хотите настроить его сейчас?",
+                        "Point I18n",
+                        Messages.getQuestionIcon()
+                    );
+                    if (option == Messages.YES) {
+                        // Показываем диалог настройки напрямую
+                        String apiKey = javax.swing.JOptionPane.showInputDialog(
+                            null,
+                            "Enter DeepL API Key:",
+                            "Point I18n - Configure DeepL API Key",
+                            javax.swing.JOptionPane.QUESTION_MESSAGE
+                        );
+                        if (apiKey != null && !apiKey.trim().isEmpty()) {
+                            configService.setDeepLApiKey(apiKey.trim());
+                            Messages.showInfoMessage("DeepL API key configured", "Point I18n");
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                    Messages.showErrorDialog("Ошибка перевода: " + e.getMessage(), "Point I18n");
+                });
+            }
+        }).start();
     }
     
     public boolean isSuccess() {

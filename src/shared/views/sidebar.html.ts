@@ -78,6 +78,44 @@ export function getSidebarHtml(): string {
             outline: 1px solid var(--vscode-focusBorder);
         }
         
+        .input-with-translate {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .input-with-translate input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .translate-btn {
+            width: auto;
+            min-width: 40px;
+            padding: 8px 12px;
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-bottom: 0;
+        }
+        
+        .translate-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        
+        .translate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
         button {
             width: 100%;
             padding: 8px 12px;
@@ -494,7 +532,10 @@ export function getSidebarHtml(): string {
                 <label style="display: block; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">Ключ:</label>
                 <input id="editKey" type="text" readonly style="background: var(--vscode-input-background); opacity: 0.7;" />
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇷🇺 Русский:</label>
-                <input id="editKeyRu" type="text" />
+                <div class="input-with-translate">
+                    <input id="editKeyRu" type="text" />
+                    <button id="translateEditBtn" class="translate-btn" title="Перевести с русского на английский и узбекский">🌐</button>
+                </div>
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇬🇧 English:</label>
                 <input id="editKeyEn" type="text" />
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇺🇿 O'zbekcha:</label>
@@ -512,7 +553,10 @@ export function getSidebarHtml(): string {
         <div class="section-title">➕ Добавить ключ</div>
         <div class="section-content">
             <input id="newKey" type="text" placeholder="Ключ (например: user-name)" />
-            <input id="newKeyRu" type="text" placeholder="🇷🇺 Русский перевод" />
+            <div class="input-with-translate">
+                <input id="newKeyRu" type="text" placeholder="🇷🇺 Русский перевод" />
+                <button id="translateCreateBtn" class="translate-btn" title="Перевести с русского на английский и узбекский">🌐</button>
+            </div>
             <input id="newKeyEn" type="text" placeholder="🇬🇧 English translation" />
             <input id="newKeyUz" type="text" placeholder="🇺🇿 O'zbekcha tarjima" />
             <button id="createKeyBtn">✨ Создать ключ</button>
@@ -547,6 +591,7 @@ export function getSidebarHtml(): string {
         const newKeyUz = document.getElementById('newKeyUz');
         const createKeyBtn = document.getElementById('createKeyBtn');
         const createKeyStatus = document.getElementById('createKeyStatus');
+        const translateCreateBtn = document.getElementById('translateCreateBtn');
         const searchSection = document.getElementById('searchSection');
         const searchInput = document.getElementById('searchInput');
         const searchResults = document.getElementById('searchResults');
@@ -577,6 +622,7 @@ export function getSidebarHtml(): string {
         const editKeyUz = document.getElementById('editKeyUz');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
         const saveEditBtn = document.getElementById('saveEditBtn');
+        const translateEditBtn = document.getElementById('translateEditBtn');
         
         // Обработчики
         loginBtn.onclick = () => {
@@ -626,6 +672,37 @@ export function getSidebarHtml(): string {
                     en: newKeyEn.value,
                     uz: newKeyUz.value
                 }
+            });
+        };
+        
+        translateCreateBtn.onclick = async () => {
+            const ruText = newKeyRu.value.trim();
+            if (!ruText) {
+                showCreateKeyMessage('❌ Введите текст на русском языке', 'error');
+                return;
+            }
+            
+            translateCreateBtn.disabled = true;
+            translateCreateBtn.textContent = '⏳';
+            
+            vscode.postMessage({
+                command: 'translate',
+                text: ruText
+            });
+        };
+        
+        translateEditBtn.onclick = async () => {
+            const ruText = editKeyRu.value.trim();
+            if (!ruText) {
+                return;
+            }
+            
+            translateEditBtn.disabled = true;
+            translateEditBtn.textContent = '⏳';
+            
+            vscode.postMessage({
+                command: 'translate',
+                text: ruText
             });
         };
         
@@ -818,8 +895,52 @@ export function getSidebarHtml(): string {
                         translatedSearchPath.value = message.searchPath;
                     }
                     break;
+                case 'translateResult':
+                    handleTranslateResult(message);
+                    break;
             }
         });
+        
+        function handleTranslateResult(message) {
+            // Восстанавливаем кнопки перевода
+            if (translateCreateBtn) {
+                translateCreateBtn.disabled = false;
+                translateCreateBtn.textContent = '🌐';
+            }
+            if (translateEditBtn) {
+                translateEditBtn.disabled = false;
+                translateEditBtn.textContent = '🌐';
+            }
+            
+            if (message.error) {
+                const errorMsg = message.error;
+                if (editModal && !editModal.classList.contains('hidden')) {
+                    // Если открыта модалка редактирования, показываем ошибку там
+                    vscode.postMessage({
+                        command: 'showError',
+                        message: errorMsg
+                    });
+                } else {
+                    showCreateKeyMessage('❌ ' + errorMsg, 'error');
+                }
+                return;
+            }
+            
+            if (message.translations) {
+                const { en, uz } = message.translations;
+                
+                // Определяем, где применять перевод
+                if (editModal && !editModal.classList.contains('hidden')) {
+                    // Модалка редактирования открыта
+                    editKeyEn.value = en;
+                    editKeyUz.value = uz;
+                } else {
+                    // Форма создания ключа
+                    newKeyEn.value = en;
+                    newKeyUz.value = uz;
+                }
+            }
+        }
         
         function showSearchResults(results, totalCount, totalPagesCount, currentPageNum, query) {
             // Обновляем состояние пагинации

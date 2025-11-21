@@ -1,8 +1,8 @@
 <idea-plugin>
     <id>com.point.i18n</id>
     <name>Point I18n</name>
-    <version>1.2.1</version>
-    <vendor email="m.zhuikov@kapitalbank.uz" url="https://git.kapitalbank.uz/m.zhuikov/point-i18n">maksim-zhuikov</vendor>
+    <version>1.2.2</version>
+    <vendor email="maksim.zhuikov@kapitalbank.uz" url="https://git.kapitalbank.uz/m.zhuikov/point-i18n">maksim-zhuikov</vendor>
 
     <description><![CDATA[
         Point I18n extension for working with localization in Point projects.
@@ -66,6 +66,9 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
         <action id="PointI18n.ConfigLocalizationApiBaseUrl" class="com.point.i18n.webstorm.actions.ConfigLocalizationApiBaseUrlAction" text="Configure Localization API Base URL">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="PointI18n.ConfigDeepLApiKey" class="com.point.i18n.webstorm.actions.ConfigDeepLApiKeyAction" text="Configure DeepL API Key">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
         <action id="PointI18n.SearchTranslatedText" class="com.point.i18n.webstorm.actions.SearchTranslatedTextAction" text="Search Translated Text">
