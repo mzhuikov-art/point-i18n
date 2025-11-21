@@ -21,6 +21,8 @@ public class EditKeyDialog extends JDialog {
     private JTextField ruField;
     private JTextField enField;
     private JTextField uzField;
+    private JButton translateButton;
+    private TranslateService translateService;
     private boolean success = false;
     
     public EditKeyDialog(Window parent, String key, String ru, String en, String uz,
@@ -32,6 +34,7 @@ public class EditKeyDialog extends JDialog {
         this.cacheService = cacheService;
         this.configService = configService;
         this.storageService = storageService;
+        this.translateService = new TranslateService(configService);
         
         initializeUI(ru, en, uz);
         setLocationRelativeTo(parent);
@@ -50,8 +53,14 @@ public class EditKeyDialog extends JDialog {
         
         // Translations
         formPanel.add(new JLabel("RU:"));
+        JPanel ruPanel = new JPanel(new BorderLayout(4, 0));
         ruField = new JTextField(ru, 30);
-        formPanel.add(ruField);
+        translateButton = new JButton("🌐");
+        translateButton.setToolTipText("Перевести с русского на английский и узбекский");
+        translateButton.addActionListener(e -> performTranslate());
+        ruPanel.add(ruField, BorderLayout.CENTER);
+        ruPanel.add(translateButton, BorderLayout.EAST);
+        formPanel.add(ruPanel);
         formPanel.add(Box.createVerticalStrut(5));
         
         formPanel.add(new JLabel("EN:"));
@@ -119,6 +128,62 @@ public class EditKeyDialog extends JDialog {
             }
             Messages.showErrorDialog("Failed to update key: " + errorMessage, "Point I18n");
         }
+    }
+    
+    private void performTranslate() {
+        String ruText = ruField.getText().trim();
+        if (ruText.isEmpty()) {
+            Messages.showErrorDialog("Введите текст на русском языке", "Point I18n");
+            return;
+        }
+        
+        translateButton.setEnabled(false);
+        translateButton.setText("⏳");
+        
+        // Выполняем перевод в отдельном потоке, чтобы не блокировать UI
+        new Thread(() -> {
+            try {
+                TranslateService.TranslationResult result = translateService.translateToEnAndUz(ruText);
+                
+                // Обновляем UI в EDT
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    enField.setText(result.en);
+                    uzField.setText(result.uz);
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                });
+            } catch (IllegalStateException e) {
+                // API ключ не настроен
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                    int option = Messages.showYesNoDialog(
+                        "DeepL API ключ не настроен. Хотите настроить его сейчас?",
+                        "Point I18n",
+                        Messages.getQuestionIcon()
+                    );
+                    if (option == Messages.YES) {
+                        // Показываем диалог настройки напрямую
+                        String apiKey = javax.swing.JOptionPane.showInputDialog(
+                            null,
+                            "Enter DeepL API Key:",
+                            "Point I18n - Configure DeepL API Key",
+                            javax.swing.JOptionPane.QUESTION_MESSAGE
+                        );
+                        if (apiKey != null && !apiKey.trim().isEmpty()) {
+                            configService.setDeepLApiKey(apiKey.trim());
+                            Messages.showInfoMessage("DeepL API key configured", "Point I18n");
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    translateButton.setEnabled(true);
+                    translateButton.setText("🌐");
+                    Messages.showErrorDialog("Ошибка перевода: " + e.getMessage(), "Point I18n");
+                });
+            }
+        }).start();
     }
     
     public boolean isSuccess() {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ApiService } from '../services/api.service';
 import { CacheService } from '../services/cache.service';
 import { StorageService } from '../services/storage.service';
+import { TranslateService } from '../services/translate.service';
 import { DecorationProvider } from '../providers/decoration.provider';
 import { getSidebarHtml } from './sidebar.html';
 import { SUPPORTED_LOCALES } from '../constants';
@@ -15,7 +16,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         private apiService: ApiService,
         private cacheService: CacheService,
         private storageService: StorageService,
-        private decorationProvider: DecorationProvider
+        private decorationProvider: DecorationProvider,
+        private translateService: TranslateService
     ) {}
 
     private showInfoMessage(message: string): void {
@@ -90,6 +92,9 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 break;
             case 'openFileAtLine':
                 await this.handleOpenFileAtLine(message.filePath, message.line);
+                break;
+            case 'translate':
+                await this.handleTranslate(message.text);
                 break;
         }
     }
@@ -818,6 +823,34 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         // Если не нашли подходящий workspace folder, используем asRelativePath как fallback
         return vscode.workspace.asRelativePath(fileUri, false);
+    }
+
+    private async handleTranslate(text: string): Promise<void> {
+        if (!text || !text.trim()) {
+            this.sendMessage({
+                command: 'translateResult',
+                error: 'Текст для перевода не может быть пустым'
+            });
+            return;
+        }
+
+        try {
+            const translations = await this.translateService.translateToEnAndUz(text.trim());
+            
+            this.sendMessage({
+                command: 'translateResult',
+                translations: {
+                    en: translations.en,
+                    uz: translations.uz
+                }
+            });
+        } catch (error: any) {
+            const errorMessage = error.message || 'Ошибка перевода';
+            this.sendMessage({
+                command: 'translateResult',
+                error: errorMessage
+            });
+        }
     }
 
     private sendMessage(message: any): void {
