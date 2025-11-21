@@ -2,7 +2,7 @@
   "name": "point-i18n",
   "displayName": "Point I18n",
   "publisher": "maksim-zhuikov",
-  "version": "1.1.6",
+  "version": "1.2.1",
   "repository": {
     "type": "git",
     "url": "https://git.kapitalbank.uz/m.zhuikov/point-i18n"
@@ -59,6 +59,10 @@
       {
         "command": "i18nRemote.configLocalizationApiBaseUrl",
         "title": "Point I18n: Configure Localization API Base URL"
+      },
+      {
+        "command": "i18nRemote.configDeepLApiKey",
+        "title": "Point I18n: Configure DeepL API Key"
       }
     ],
     "keybindings": [
@@ -105,7 +109,8 @@
     "build:vscode": "node esbuild.config.js",
     "build:webstorm": "tsc --project src/ide/webstorm/tsconfig.json",
     "watch": "esbuild src/ide/vscode/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
-    "package": "pnpm build && vsce package --no-dependencies"
+    "package:vscode": "pnpm build && vsce package --no-dependencies",
+    "package:webstorm": "cd src/ide/webstorm && export JAVA_HOME=\"/opt/homebrew/opt/openjdk@17\" && export PATH=\"/opt/homebrew/opt/openjdk@17/bin:$PATH\" && ./gradlew buildPlugin"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
