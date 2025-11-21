@@ -103,18 +103,28 @@ public class CreateKeyDialog extends JDialog {
             String projectKey = configService.getProjectKey();
             ApiService.CreateKeyResponse response = apiService.createKey(request, projectKey);
             
+            // Проверяем, что ответ содержит данные
+            if (response == null || response.data == null) {
+                Messages.showErrorDialog("Failed to create key: Invalid response from server", "Point I18n");
+                return;
+            }
+            
             // Add to cache
             Map<String, String> translations = new HashMap<>();
-            translations.put("ru", response.data.translations.ru != null ? response.data.translations.ru : "");
-            translations.put("en", response.data.translations.en != null ? response.data.translations.en : "");
-            translations.put("uz", response.data.translations.uz != null ? response.data.translations.uz : "");
+            translations.put("ru", response.data.translations != null && response.data.translations.ru != null ? response.data.translations.ru : "");
+            translations.put("en", response.data.translations != null && response.data.translations.en != null ? response.data.translations.en : "");
+            translations.put("uz", response.data.translations != null && response.data.translations.uz != null ? response.data.translations.uz : "");
             cacheService.addKey(response.data.key, translations);
             
             success = true;
             Messages.showInfoMessage("Key created successfully!", "Point I18n");
             dispose();
         } catch (Exception ex) {
-            Messages.showErrorDialog("Failed to create key: " + ex.getMessage(), "Point I18n");
+            String errorMessage = ex.getMessage();
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = "Unknown error occurred";
+            }
+            Messages.showErrorDialog("Failed to create key: " + errorMessage, "Point I18n");
         }
     }
     

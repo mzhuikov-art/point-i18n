@@ -149,6 +149,11 @@ public class ApiService {
         public int totalPages;
     }
     
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    public static class CreateKeyErrorResponse {
+        public String message;
+    }
+    
     // Helper method to get token
     private String getToken() throws IOException {
         String token = storageService.getAccessToken();
@@ -245,8 +250,74 @@ public class ApiService {
         String apiBaseUrl = configService.getApiBaseUrl();
         String url = apiBaseUrl + "/api/v1/proxy/localization/api/localization/" + projectKey + "/new";
         String jsonBody = objectMapper.writeValueAsString(request);
-        String response = makePostRequest(url, token, jsonBody);
-        return objectMapper.readValue(response, CreateKeyResponse.class);
+        
+        // Выполняем запрос напрямую, чтобы получить код ответа
+        URL urlObj = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Authorization", "Bearer " + token);
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setDoOutput(true);
+        
+        try (java.io.OutputStream os = connection.getOutputStream()) {
+            byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
+        
+        int responseCode = connection.getResponseCode();
+        String responseText;
+        
+        // Читаем ответ (может быть из InputStream или ErrorStream)
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(
+                    responseCode >= 200 && responseCode < 300 
+                        ? connection.getInputStream() 
+                        : connection.getErrorStream(), 
+                    StandardCharsets.UTF_8))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            responseText = response.length() > 0 ? response.toString() : "{}";
+        }
+        
+        // Если код ответа не успешный, пытаемся извлечь сообщение об ошибке
+        if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_CREATED) {
+            String errorMessage = "Failed to create key: " + responseCode;
+            try {
+                CreateKeyErrorResponse errorResponse = objectMapper.readValue(responseText, CreateKeyErrorResponse.class);
+                if (errorResponse.message != null && !errorResponse.message.isEmpty()) {
+                    errorMessage = errorResponse.message;
+                    if (errorMessage.toLowerCase().contains("duplicate key")) {
+                        errorMessage = "Ключ уже существует";
+                    }
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                // Если не удалось распарсить, используем текст ответа
+                if (responseText != null && !responseText.isEmpty() && !responseText.equals("{}")) {
+                    errorMessage = responseText;
+                }
+            }
+            throw new IOException(errorMessage);
+        }
+        
+        // Код ответа успешный, проверяем наличие поля message в ответе (ошибка бизнес-логики)
+        try {
+            CreateKeyErrorResponse errorResponse = objectMapper.readValue(responseText, CreateKeyErrorResponse.class);
+            if (errorResponse.message != null && !errorResponse.message.isEmpty()) {
+                String errorMessage = errorResponse.message;
+                if (errorMessage.toLowerCase().contains("duplicate key")) {
+                    throw new IOException("Ключ уже существует");
+                }
+                throw new IOException(errorMessage);
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // Если не удалось распарсить как ошибку, продолжаем
+        }
+        
+        // Десериализуем успешный ответ
+        return objectMapper.readValue(responseText, CreateKeyResponse.class);
     }
     
     public CreateKeyResponse updateKey(CreateKeyRequest request, String projectKey) throws IOException {
