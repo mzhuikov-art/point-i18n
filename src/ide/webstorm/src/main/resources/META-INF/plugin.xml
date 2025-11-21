@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.point.i18n</id>
     <name>Point I18n</name>
-    <version>1.1.6</version>
+    <version>1.2.1</version>
     <vendor email="m.zhuikov@kapitalbank.uz" url="https://git.kapitalbank.uz/m.zhuikov/point-i18n">maksim-zhuikov</vendor>
 
     <description><![CDATA[
