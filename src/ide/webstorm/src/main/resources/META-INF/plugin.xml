@@ -68,6 +68,9 @@
         <action id="PointI18n.ConfigLocalizationApiBaseUrl" class="com.point.i18n.webstorm.actions.ConfigLocalizationApiBaseUrlAction" text="Configure Localization API Base URL">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
+        <action id="PointI18n.ConfigDeepLApiKey" class="com.point.i18n.webstorm.actions.ConfigDeepLApiKeyAction" text="Configure DeepL API Key">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="PointI18n.SearchTranslatedText" class="com.point.i18n.webstorm.actions.SearchTranslatedTextAction" text="Search Translated Text">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>

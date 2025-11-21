@@ -10,6 +10,7 @@ public class ConfigService {
     private static final String CONFIG_NAMESPACE = "point.i18n";
     private static final String API_BASE_URL_KEY = CONFIG_NAMESPACE + ".apiBaseUrl";
     private static final String LOCALIZATION_API_BASE_URL_KEY = CONFIG_NAMESPACE + ".localizationApiBaseUrl";
+    private static final String DEEPL_API_KEY = CONFIG_NAMESPACE + ".deepLApiKey";
     
     private final PropertiesComponent propertiesComponent;
     
@@ -55,6 +56,14 @@ public class ConfigService {
     
     public void setSearchPath(String searchPath) {
         propertiesComponent.setValue(CONFIG_NAMESPACE + ".searchPath", searchPath);
+    }
+    
+    public String getDeepLApiKey() {
+        return propertiesComponent.getValue(DEEPL_API_KEY);
+    }
+    
+    public void setDeepLApiKey(String apiKey) {
+        propertiesComponent.setValue(DEEPL_API_KEY, apiKey);
     }
     
     private String normalizeUrl(String url) {

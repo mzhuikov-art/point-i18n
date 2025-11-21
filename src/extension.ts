@@ -3,6 +3,7 @@ import { supportedLanguages, SUPPORTED_LOCALES } from './constants';
 import { ApiService } from './services/api.service';
 import { CacheService } from './services/cache.service';
 import { StorageService } from './services/storage.service';
+import { TranslateService } from './services/translate.service';
 import { HoverProvider } from './providers/hover.provider';
 import { DecorationProvider } from './providers/decoration.provider';
 import { TranslatedContentProvider } from './providers/translated-content.provider';
@@ -39,13 +40,16 @@ export function activate(ctx: vscode.ExtensionContext): void {
         storageService
     );
 
+    const translateService = new TranslateService();
+
     // Регистрируем sidebar
     const sidebarProvider = new SidebarViewProvider(
         ctx,
         apiService,
         cacheService,
         storageService,
-        decorationProvider
+        decorationProvider,
+        translateService
     );
     
     ctx.subscriptions.push(
@@ -259,6 +263,32 @@ export function activate(ctx: vscode.ExtensionContext): void {
                 const normalizedUrl = url.trim().replace(/\/+$/, '');
                 await config.update('localizationApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
                 vscode.window.showInformationMessage(`Localization API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+    // Команда для настройки DeepL API ключа
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configDeepLApiKey', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentKey = config.get<string>('deepLApiKey') || '';
+            
+            const apiKey = await vscode.window.showInputBox({
+                prompt: 'Введите API ключ DeepL',
+                value: currentKey,
+                placeHolder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx',
+                password: true,
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'API ключ не может быть пустым';
+                    }
+                    return null;
+                }
+            });
+
+            if (apiKey !== undefined) {
+                await config.update('deepLApiKey', apiKey.trim(), vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('DeepL API ключ установлен');
             }
         })
     );
