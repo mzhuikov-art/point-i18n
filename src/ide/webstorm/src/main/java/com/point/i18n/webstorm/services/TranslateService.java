@@ -40,7 +40,7 @@ public class TranslateService {
         
         String apiKey = getApiKey();
         String sourceLanguage = "RU"; // Всегда переводим с русского
-        String targetLang = targetLanguage.toUpperCase();
+        String targetLang = "cn".equalsIgnoreCase(targetLanguage) ? "ZH" : targetLanguage.toUpperCase();
         
         boolean isBetaLanguage = BETA_LANGUAGES.contains(targetLang);
         
@@ -107,7 +107,7 @@ public class TranslateService {
     
     public TranslationResult translateToEnAndUz(String ruText) throws IOException {
         if (ruText == null || ruText.trim().isEmpty()) {
-            return new TranslationResult("", "");
+            return new TranslationResult("", "", "");
         }
         
         String en = translate(ruText, "EN");
@@ -116,11 +116,17 @@ public class TranslateService {
         try {
             uz = translate(ruText, "UZ");
         } catch (Exception e) {
-            // Если перевод на узбекский не удался, оставляем пустую строку
             System.out.println("Ошибка перевода на узбекский язык: " + e.getMessage());
         }
+
+        String cn = "";
+        try {
+            cn = translate(ruText, "cn");
+        } catch (Exception e) {
+            System.out.println("Ошибка перевода на китайский язык: " + e.getMessage());
+        }
         
-        return new TranslationResult(en, uz);
+        return new TranslationResult(en, uz, cn);
     }
     
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
@@ -142,10 +148,12 @@ public class TranslateService {
     public static class TranslationResult {
         public final String en;
         public final String uz;
+        public final String cn;
         
-        public TranslationResult(String en, String uz) {
+        public TranslationResult(String en, String uz, String cn) {
             this.en = en;
             this.uz = uz;
+            this.cn = cn;
         }
     }
 }

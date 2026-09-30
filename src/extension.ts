@@ -212,7 +212,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
             const currentUrl = config.get<string>('apiBaseUrl') || '';
             
             const url = await vscode.window.showInputBox({
-                prompt: 'Введите базовый URL для API (auth, projects, create, update, search)',
+                prompt: 'Введите базовый URL для API (auth, create, update, search)',
                 value: currentUrl,
                 placeHolder: 'https://example.com',
                 validateInput: (value) => {
@@ -267,6 +267,36 @@ export function activate(ctx: vscode.ExtensionContext): void {
         })
     );
 
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configProjectsApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('projectsApiBaseUrl') || '';
+
+            const url = await vscode.window.showInputBox({
+                prompt: 'Введите базовый URL для API проектов (список проектов)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('projectsApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Projects API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
     // Команда для настройки DeepL API ключа
     ctx.subscriptions.push(
         vscode.commands.registerCommand('i18nRemote.configDeepLApiKey', async () => {
@@ -300,7 +330,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
             const currentUrl = config.get<string>('apiBaseUrl') || '';
             
             const url = await vscode.window.showInputBox({
-                prompt: 'Введите базовый URL для API (auth, projects, create, update, search)',
+                prompt: 'Введите базовый URL для API (auth, create, update, search)',
                 value: currentUrl,
                 placeHolder: 'https://example.com',
                 validateInput: (value) => {

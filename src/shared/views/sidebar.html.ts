@@ -178,6 +178,18 @@ export function getSidebarHtml(): string {
         .hidden {
             display: none;
         }
+
+        body.cn-project .stats {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .cn-only {
+            display: none !important;
+        }
+
+        body.cn-project .cn-only {
+            display: block !important;
+        }
         
         .stats {
             display: grid;
@@ -231,6 +243,10 @@ export function getSidebarHtml(): string {
             grid-template-columns: repeat(3, 1fr);
             gap: 4px;
             font-size: 11px;
+        }
+
+        body.cn-project .search-result-translations {
+            grid-template-columns: repeat(4, 1fr);
         }
         
         .search-result-translation {
@@ -450,6 +466,10 @@ export function getSidebarHtml(): string {
                     <div class="stat-value" id="statUz">—</div>
                     <div class="stat-label">🇺🇿 UZ</div>
                 </div>
+                <div class="stat cn-only">
+                    <div class="stat-value" id="statCn">—</div>
+                    <div class="stat-label">🇨🇳 CN</div>
+                </div>
             </div>
             
             <button id="refreshBtn">🔄 Обновить переводы</button>
@@ -468,6 +488,7 @@ export function getSidebarHtml(): string {
                     <option value="ru">🇷🇺 RU</option>
                     <option value="en">🇬🇧 EN</option>
                     <option value="uz">🇺🇿 UZ</option>
+                    <option value="cn" id="localeCnOption" hidden>🇨🇳 CN</option>
                 </select>
             </div>
             <div class="setting">
@@ -534,12 +555,14 @@ export function getSidebarHtml(): string {
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇷🇺 Русский:</label>
                 <div class="input-with-translate">
                     <input id="editKeyRu" type="text" />
-                    <button id="translateEditBtn" class="translate-btn" title="Перевести с русского на английский и узбекский">🌐</button>
+                    <button id="translateEditBtn" class="translate-btn" title="Перевести с русского на английский, узбекский и китайский">🌐</button>
                 </div>
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇬🇧 English:</label>
                 <input id="editKeyEn" type="text" />
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇺🇿 O'zbekcha:</label>
                 <input id="editKeyUz" type="text" />
+                <label class="cn-only" style="margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇨🇳 中文:</label>
+                <input id="editKeyCn" class="cn-only" type="text" />
             </div>
             <div class="modal-footer">
                 <button id="cancelEditBtn" class="secondary">Отмена</button>
@@ -555,10 +578,11 @@ export function getSidebarHtml(): string {
             <input id="newKey" type="text" placeholder="Ключ (например: user-name)" />
             <div class="input-with-translate">
                 <input id="newKeyRu" type="text" placeholder="🇷🇺 Русский перевод" />
-                <button id="translateCreateBtn" class="translate-btn" title="Перевести с русского на английский и узбекский">🌐</button>
+                <button id="translateCreateBtn" class="translate-btn" title="Перевести с русского на английский, узбекский и китайский">🌐</button>
             </div>
             <input id="newKeyEn" type="text" placeholder="🇬🇧 English translation" />
             <input id="newKeyUz" type="text" placeholder="🇺🇿 O'zbekcha tarjima" />
+            <input id="newKeyCn" class="cn-only" type="text" placeholder="🇨🇳 中文" />
             <button id="createKeyBtn">✨ Создать ключ</button>
             <div id="createKeyStatus" class="status hidden"></div>
         </div>
@@ -584,11 +608,13 @@ export function getSidebarHtml(): string {
         const statRu = document.getElementById('statRu');
         const statEn = document.getElementById('statEn');
         const statUz = document.getElementById('statUz');
+        const statCn = document.getElementById('statCn');
         const createKeySection = document.getElementById('createKeySection');
         const newKey = document.getElementById('newKey');
         const newKeyRu = document.getElementById('newKeyRu');
         const newKeyEn = document.getElementById('newKeyEn');
         const newKeyUz = document.getElementById('newKeyUz');
+        const newKeyCn = document.getElementById('newKeyCn');
         const createKeyBtn = document.getElementById('createKeyBtn');
         const createKeyStatus = document.getElementById('createKeyStatus');
         const translateCreateBtn = document.getElementById('translateCreateBtn');
@@ -620,6 +646,7 @@ export function getSidebarHtml(): string {
         const editKeyRu = document.getElementById('editKeyRu');
         const editKeyEn = document.getElementById('editKeyEn');
         const editKeyUz = document.getElementById('editKeyUz');
+        const editKeyCn = document.getElementById('editKeyCn');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
         const saveEditBtn = document.getElementById('saveEditBtn');
         const translateEditBtn = document.getElementById('translateEditBtn');
@@ -652,10 +679,24 @@ export function getSidebarHtml(): string {
             });
         };
         
+        function setCnProject(projectKey) {
+            const enabled = projectKey === 'b2b-frontend';
+            document.body.classList.toggle('cn-project', enabled);
+            const option = document.getElementById('localeCnOption');
+            if (option) {
+                option.hidden = !enabled;
+                option.disabled = !enabled;
+            }
+            if (!enabled && localeSelect.value === 'cn') {
+                localeSelect.value = 'ru';
+            }
+        }
+
         projectSelect.onchange = (e) => {
             const projectKey = e.target.value;
             if (projectKey) {
                 currentProjectKey = projectKey;
+                setCnProject(projectKey);
                 vscode.postMessage({
                     command: 'changeProject',
                     projectKey: projectKey
@@ -670,7 +711,8 @@ export function getSidebarHtml(): string {
                 translations: {
                     ru: newKeyRu.value,
                     en: newKeyEn.value,
-                    uz: newKeyUz.value
+                    uz: newKeyUz.value,
+                    cn: newKeyCn.value
                 }
             });
         };
@@ -801,7 +843,8 @@ export function getSidebarHtml(): string {
                 translations: {
                     ru: editKeyRu.value,
                     en: editKeyEn.value,
-                    uz: editKeyUz.value
+                    uz: editKeyUz.value,
+                    cn: editKeyCn.value
                 }
             });
         };
@@ -841,6 +884,7 @@ export function getSidebarHtml(): string {
                     break;
                 case 'updateProject':
                     currentProjectKey = message.projectKey || '';
+                    setCnProject(currentProjectKey);
                     updateProjectName(message.projectKey, message.projectName);
                     // Устанавливаем значение, если список уже загружен
                     if (currentProjectKey && projectSelect.options.length > 0) {
@@ -927,17 +971,19 @@ export function getSidebarHtml(): string {
             }
             
             if (message.translations) {
-                const { en, uz } = message.translations;
+                const { en, uz, cn } = message.translations;
                 
                 // Определяем, где применять перевод
                 if (editModal && !editModal.classList.contains('hidden')) {
                     // Модалка редактирования открыта
                     editKeyEn.value = en;
                     editKeyUz.value = uz;
+                    editKeyCn.value = cn || '';
                 } else {
                     // Форма создания ключа
                     newKeyEn.value = en;
                     newKeyUz.value = uz;
+                    newKeyCn.value = cn || '';
                 }
             }
         }
@@ -967,16 +1013,18 @@ export function getSidebarHtml(): string {
                 const ru = result.translations.ru || '';
                 const en = result.translations.en || '';
                 const uz = result.translations.uz || '';
+                const cn = result.translations.cn || '';
                 
                 html += '<div class="search-result-item">';
                 html += '<div class="search-result-key-wrapper">';
                 html += '<div class="search-result-key">' + escapeHtml(backtick + key + backtick) + '</div>';
-                html += '<button class="edit-btn" data-key="' + escapeHtml(key) + '" data-ru="' + escapeHtml(ru) + '" data-en="' + escapeHtml(en) + '" data-uz="' + escapeHtml(uz) + '">✏️</button>';
+                html += '<button class="edit-btn" data-key="' + escapeHtml(key) + '" data-ru="' + escapeHtml(ru) + '" data-en="' + escapeHtml(en) + '" data-uz="' + escapeHtml(uz) + '" data-cn="' + escapeHtml(cn) + '">✏️</button>';
                 html += '</div>';
                 html += '<div class="search-result-translations">';
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇷🇺 RU</div>' + escapeHtml(ru || '') + '</div>';
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇬🇧 EN</div>' + escapeHtml(en || '') + '</div>';
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇺🇿 UZ</div>' + escapeHtml(uz || '') + '</div>';
+                html += '<div class="search-result-translation cn-only"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>';
                 html += '</div></div>';
             }
             
@@ -1019,7 +1067,8 @@ export function getSidebarHtml(): string {
                     const ru = this.getAttribute('data-ru');
                     const en = this.getAttribute('data-en');
                     const uz = this.getAttribute('data-uz');
-                    openEditModal(key, ru, en, uz);
+                    const cn = this.getAttribute('data-cn');
+                    openEditModal(key, ru, en, uz, cn);
                 });
             });
         }
@@ -1035,16 +1084,18 @@ export function getSidebarHtml(): string {
             const ru = translations.ru || '';
             const en = translations.en || '';
             const uz = translations.uz || '';
+            const cn = translations.cn || '';
             
             const itemHtml = '<div class="search-result-item">' +
                 '<div class="search-result-key-wrapper">' +
                 '<div class="search-result-key">' + escapeHtml(backtick + key + backtick) + '</div>' +
-                '<button class="edit-btn" data-key="' + escapeHtml(key) + '" data-ru="' + escapeHtml(ru) + '" data-en="' + escapeHtml(en) + '" data-uz="' + escapeHtml(uz) + '">✏️</button>' +
+                '<button class="edit-btn" data-key="' + escapeHtml(key) + '" data-ru="' + escapeHtml(ru) + '" data-en="' + escapeHtml(en) + '" data-uz="' + escapeHtml(uz) + '" data-cn="' + escapeHtml(cn) + '">✏️</button>' +
                 '</div>' +
                 '<div class="search-result-translations">' +
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇷🇺 RU</div>' + escapeHtml(ru || '') + '</div>' +
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇬🇧 EN</div>' + escapeHtml(en || '') + '</div>' +
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇺🇿 UZ</div>' + escapeHtml(uz || '') + '</div>' +
+                '<div class="search-result-translation cn-only"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>' +
                 '</div></div>';
             
             // Вставляем новый элемент в начало таблицы
@@ -1067,7 +1118,8 @@ export function getSidebarHtml(): string {
                     const ru = this.getAttribute('data-ru');
                     const en = this.getAttribute('data-en');
                     const uz = this.getAttribute('data-uz');
-                    openEditModal(key, ru, en, uz);
+                    const cn = this.getAttribute('data-cn');
+                    openEditModal(key, ru, en, uz, cn);
                 });
             }
         }
@@ -1078,11 +1130,12 @@ export function getSidebarHtml(): string {
             return div.innerHTML;
         }
         
-        function openEditModal(key, ru, en, uz) {
+        function openEditModal(key, ru, en, uz, cn) {
             editKey.value = key;
             editKeyRu.value = ru;
             editKeyEn.value = en;
             editKeyUz.value = uz;
+            editKeyCn.value = cn || '';
             editModal.classList.remove('hidden');
         }
         
@@ -1171,6 +1224,7 @@ export function getSidebarHtml(): string {
             statRu.textContent = stats.ru || '—';
             statEn.textContent = stats.en || '—';
             statUz.textContent = stats.uz || '—';
+            statCn.textContent = stats.cn || '—';
         }
         
         function showMessage(text, type = 'info') {

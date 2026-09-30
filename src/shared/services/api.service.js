@@ -27,8 +27,8 @@ class ApiService {
         return `${baseUrl}/api/v1/proxy/realms/auth/protocol/openid-connect/userinfo`;
     }
     async getProjectsUrl() {
-        const baseUrl = await this.configService.getApiBaseUrl();
-        return `${baseUrl}/api/v1/proxy/localization/api/localization-project?pageSize=100`;
+        const baseUrl = await this.configService.getProjectsApiBaseUrl();
+        return `${baseUrl}/api/v1/localization-project?pageSize=100`;
     }
     async getFetchLocalesUrl(locale, projectKey) {
         const baseUrl = await this.configService.getLocalizationApiBaseUrl();

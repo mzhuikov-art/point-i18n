@@ -1,7 +1,7 @@
 import { ApiService, CacheService } from '../../../shared/services';
 import { IStorageService, IConfigService, Position, TextDocument } from '../../../shared/types';
 import { getI18nKeyInfoAtPosition } from '../../../shared/utils';
-import { SUPPORTED_LOCALES } from '../../../shared/constants';
+import { getLocalesForProject } from '../../../shared/constants';
 
 export class WebStormHoverProvider {
     constructor(
@@ -36,7 +36,7 @@ export class WebStormHoverProvider {
     }
 
     private async ensureAllLocalesLoaded(): Promise<void> {
-        for (const locale of SUPPORTED_LOCALES) {
+        for (const locale of getLocalesForProject(this.configService.getProjectKey())) {
             if (!this.cacheService.has(locale)) {
                 try {
                     await this.fetchAndCacheLocales(locale);
@@ -48,7 +48,7 @@ export class WebStormHoverProvider {
     }
 
     private createTranslationTable(key: string): string | undefined {
-        const languages = SUPPORTED_LOCALES;
+        const languages = getLocalesForProject(this.configService.getProjectKey());
         const translations: Record<string, string> = {};
         let hasAnyTranslation = false;
 
@@ -85,7 +85,8 @@ export class WebStormHoverProvider {
         const flags: Record<string, string> = {
             'ru': '🇷🇺',
             'en': '🇬🇧',
-            'uz': '🇺🇿'
+            'uz': '🇺🇿',
+            'cn': '🇨🇳'
         };
         return flags[locale] || '🌐';
     }

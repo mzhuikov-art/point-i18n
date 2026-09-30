@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ApiService, CacheService } from '../../../shared/services';
-import { SUPPORTED_LOCALES } from '../../../shared/constants';
+import { CN_LOCALE, getLocalesForProject, isCnProject, OPTIONAL_LOCALES } from '../../../shared/constants';
 import { CreateKeyRequest } from '../../../shared/types';
 import { TranslateService } from '../../../services/translate.service';
 import { VSCodeStorageService } from '../services/storage.service';
@@ -172,7 +172,39 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         return vscode.workspace.getConfiguration('i18nRemote').get<string>('locale') || 'ru';
     }
 
+    private getLocales(): string[] {
+        return getLocalesForProject(this.getProjectKey());
+    }
+
+    private buildTranslations(translations: { ru: string; en: string; uz: string; cn?: string }): { ru: string; en: string; uz: string; cn?: string } {
+        const result: { ru: string; en: string; uz: string; cn?: string } = {
+            ru: translations.ru || '',
+            en: translations.en || '',
+            uz: translations.uz || ''
+        };
+
+        if (isCnProject(this.getProjectKey())) {
+            result.cn = translations.cn || '';
+        }
+
+        return result;
+    }
+
+    private async ensureLocaleMatchesProject(): Promise<void> {
+        if (this.getLocaleFromConfig() === CN_LOCALE && !isCnProject(this.getProjectKey())) {
+            await vscode.workspace.getConfiguration('i18nRemote').update(
+                'locale',
+                'ru',
+                vscode.ConfigurationTarget.Global
+            );
+        }
+    }
+
     private async handleChangeLocale(locale: string): Promise<void> {
+        if (locale === CN_LOCALE && !isCnProject(this.getProjectKey())) {
+            return;
+        }
+
         await vscode.workspace.getConfiguration('i18nRemote').update(
             'locale',
             locale,
@@ -192,6 +224,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             projectKey,
             vscode.ConfigurationTarget.Global
         );
+        await this.ensureLocaleMatchesProject();
         
         const token = await this.storageService.getToken();
         if (token) {
@@ -233,7 +266,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleCreateKey(key: string, translations: { ru: string; en: string; uz: string }): Promise<void> {
+    private async handleCreateKey(key: string, translations: { ru: string; en: string; uz: string; cn?: string }): Promise<void> {
         if (!key || !key.trim()) {
             vscode.window.showErrorMessage('❌ Введите ключ');
             return;
@@ -250,17 +283,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             const projectKey = this.getProjectKey();
             const request: CreateKeyRequest = {
                 key: key.trim(),
-                translations: {
-                    ru: translations.ru || '',
-                    en: translations.en || '',
-                    uz: translations.uz || ''
-                }
+                translations: this.buildTranslations(translations)
             };
 
             const response = await this.apiService.createKey(undefined, request, projectKey);
             
             // Добавляем ключ в кеш
-            this.cacheService.addKey(response.data.key, response.data.translations);
+            this.cacheService.addKey(response.data.key, {
+                ...response.data.translations,
+                ...request.translations
+            });
             
             // Добавляем ключ в существующие результаты поиска
             this.sendMessage({
@@ -269,7 +301,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 translations: {
                     ru: response.data.translations.ru || '',
                     en: response.data.translations.en || '',
-                    uz: response.data.translations.uz || ''
+                    uz: response.data.translations.uz || '',
+                    cn: response.data.translations.cn || ''
                 }
             });
             
@@ -295,12 +328,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     private async loadAllLocales(): Promise<void> {
         const projectKey = this.getProjectKey();
-        const promises = SUPPORTED_LOCALES.map(async (locale) => {
+        const promises = this.getLocales().map(async (locale) => {
             try {
                 const locales = await this.apiService.fetchLocales(undefined, locale, projectKey);
                 this.cacheService.set(locale, locales);
             } catch (error) {
                 console.error(`Failed to fetch ${locale}:`, error);
+                if (OPTIONAL_LOCALES.includes(locale)) {
+                    this.cacheService.set(locale, {});
+                }
             }
         });
         
@@ -318,7 +354,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         if (isAuthenticated && token) {
             // Проверяем, есть ли все локали в кеше
-            const hasAllLocales = SUPPORTED_LOCALES.every(locale => this.cacheService.has(locale));
+            const hasAllLocales = this.getLocales().every(locale => this.cacheService.has(locale));
             
             // Если нет всех локалей, загружаем их
             if (!hasAllLocales) {
@@ -332,7 +368,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             });
         }
 
-        const locale = vscode.workspace.getConfiguration('i18nRemote').get<string>('locale') || 'ru';
+        await this.ensureLocaleMatchesProject();
+        const locale = this.getLocaleFromConfig();
         const projectKey = this.getProjectKey();
         const searchPath = vscode.workspace.getConfiguration('i18nRemote').get<string>('searchPath') || 'src';
         
@@ -396,7 +433,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     translations: {
                         ru: item.translations.ru || '',
                         en: item.translations.en || '',
-                        uz: item.translations.uz || ''
+                        uz: item.translations.uz || '',
+                        cn: item.translations.cn || ''
                     }
                 })),
                 totalCount: totalCount,
@@ -419,7 +457,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     translations: {
                         ru: item.translations.ru || '',
                         en: item.translations.en || '',
-                        uz: item.translations.uz || ''
+                        uz: item.translations.uz || '',
+                        cn: item.translations.cn || ''
                     }
                 })),
                 totalCount: response.totalCount,
@@ -444,7 +483,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     translations: {
                         ru: item.translations.ru || '',
                         en: item.translations.en || '',
-                        uz: item.translations.uz || ''
+                        uz: item.translations.uz || '',
+                        cn: item.translations.cn || ''
                     }
                 })),
                 totalCount: totalCount,
@@ -455,7 +495,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleUpdateKey(key: string, translations: { ru: string; en: string; uz: string }): Promise<void> {
+    private async handleUpdateKey(key: string, translations: { ru: string; en: string; uz: string; cn?: string }): Promise<void> {
         const token = await this.storageService.getToken();
         if (!token) {
             vscode.window.showErrorMessage('❌ Нет токена. Выполняется выход...');
@@ -467,17 +507,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             const projectKey = this.getProjectKey();
             const request: CreateKeyRequest = {
                 key: key.trim(),
-                translations: {
-                    ru: translations.ru || '',
-                    en: translations.en || '',
-                    uz: translations.uz || ''
-                }
+                translations: this.buildTranslations(translations)
             };
 
             const response = await this.apiService.updateKey(undefined, request, projectKey);
             
             // Обновляем ключ в кеше
-            this.cacheService.updateKey(response.data.key, response.data.translations);
+            this.cacheService.updateKey(response.data.key, {
+                ...response.data.translations,
+                ...request.translations
+            });
             
             this.showInfoMessage(`✅ Ключ "${response.data.key}" обновлен`);
             
@@ -508,7 +547,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     private getStats(): Record<string, number> {
         const stats: Record<string, number> = {};
         
-        for (const locale of SUPPORTED_LOCALES) {
+        for (const locale of this.getLocales()) {
             const data = this.cacheService.get(locale);
             stats[locale] = data ? Object.keys(data).length : 0;
         }
@@ -834,13 +873,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         }
 
         try {
-            const translations = await this.translateService.translateToEnAndUz(text.trim());
+            const translations = await this.translateService.translateToEnAndUz(text.trim(), isCnProject(this.getProjectKey()));
             
             this.sendMessage({
                 command: 'translateResult',
                 translations: {
                     en: translations.en,
-                    uz: translations.uz
+                    uz: translations.uz,
+                    ...(isCnProject(this.getProjectKey()) ? { cn: translations.cn } : {})
                 }
             });
         } catch (error: any) {

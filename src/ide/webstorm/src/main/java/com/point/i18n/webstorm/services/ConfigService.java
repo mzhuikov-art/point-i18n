@@ -10,6 +10,7 @@ public class ConfigService {
     private static final String CONFIG_NAMESPACE = "point.i18n";
     private static final String API_BASE_URL_KEY = CONFIG_NAMESPACE + ".apiBaseUrl";
     private static final String LOCALIZATION_API_BASE_URL_KEY = CONFIG_NAMESPACE + ".localizationApiBaseUrl";
+    private static final String PROJECTS_API_BASE_URL_KEY = CONFIG_NAMESPACE + ".projectsApiBaseUrl";
     private static final String DEEPL_API_KEY = CONFIG_NAMESPACE + ".deepLApiKey";
     
     private final PropertiesComponent propertiesComponent;
@@ -34,8 +35,29 @@ public class ConfigService {
         return normalizeUrl(url);
     }
     
+    public String getProjectsApiBaseUrl() {
+        String url = propertiesComponent.getValue(PROJECTS_API_BASE_URL_KEY);
+        if (url == null || url.trim().isEmpty()) {
+            throw new IllegalStateException("Projects API Base URL is not configured. Please configure it first.");
+        }
+        return normalizeUrl(url);
+    }
+
+    public static final String CN_PROJECT_KEY = "b2b-frontend";
+
     public String getProjectKey() {
         return propertiesComponent.getValue(CONFIG_NAMESPACE + ".projectKey", "point-frontend");
+    }
+
+    public boolean isCnProject() {
+        return CN_PROJECT_KEY.equals(getProjectKey());
+    }
+
+    public java.util.List<String> getLocales() {
+        if (isCnProject()) {
+            return java.util.Arrays.asList("ru", "en", "uz", "cn");
+        }
+        return java.util.Arrays.asList("ru", "en", "uz");
     }
     
     public String getLocale() {

@@ -129,6 +129,7 @@ public class ApiService {
         public String ru;
         public String en;
         public String uz;
+        public String cn;
     }
     
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
@@ -230,8 +231,8 @@ public class ApiService {
     
     public ProjectsResponse fetchProjects() throws IOException {
         String token = getToken();
-        String apiBaseUrl = configService.getApiBaseUrl();
-        String url = apiBaseUrl + "/api/v1/proxy/localization/api/localization-project?pageSize=100";
+        String projectsApiBaseUrl = configService.getProjectsApiBaseUrl();
+        String url = projectsApiBaseUrl + "/api/v1/localization-project?pageSize=100";
         String response = makeGetRequest(url, token);
         return objectMapper.readValue(response, ProjectsResponse.class);
     }

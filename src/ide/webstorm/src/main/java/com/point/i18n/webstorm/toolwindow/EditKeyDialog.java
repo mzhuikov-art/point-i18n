@@ -21,11 +21,12 @@ public class EditKeyDialog extends JDialog {
     private JTextField ruField;
     private JTextField enField;
     private JTextField uzField;
+    private JTextField cnField;
     private JButton translateButton;
     private TranslateService translateService;
     private boolean success = false;
     
-    public EditKeyDialog(Window parent, String key, String ru, String en, String uz,
+    public EditKeyDialog(Window parent, String key, String ru, String en, String uz, String cn,
                         ApiService apiService, CacheService cacheService, 
                         ConfigService configService, StorageService storageService) {
         super(parent, "Edit Key: " + key, ModalityType.APPLICATION_MODAL);
@@ -36,12 +37,12 @@ public class EditKeyDialog extends JDialog {
         this.storageService = storageService;
         this.translateService = new TranslateService(configService);
         
-        initializeUI(ru, en, uz);
+        initializeUI(ru, en, uz, cn);
         setLocationRelativeTo(parent);
         pack();
     }
     
-    private void initializeUI(String ru, String en, String uz) {
+    private void initializeUI(String ru, String en, String uz, String cn) {
         getContentPane().setLayout(new BorderLayout());
         ((JComponent) getContentPane()).setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
@@ -56,7 +57,7 @@ public class EditKeyDialog extends JDialog {
         JPanel ruPanel = new JPanel(new BorderLayout(4, 0));
         ruField = new JTextField(ru, 30);
         translateButton = new JButton("🌐");
-        translateButton.setToolTipText("Перевести с русского на английский и узбекский");
+        translateButton.setToolTipText("Перевести с русского на английский, узбекский и китайский");
         translateButton.addActionListener(e -> performTranslate());
         ruPanel.add(ruField, BorderLayout.CENTER);
         ruPanel.add(translateButton, BorderLayout.EAST);
@@ -71,6 +72,15 @@ public class EditKeyDialog extends JDialog {
         formPanel.add(new JLabel("UZ:"));
         uzField = new JTextField(uz, 30);
         formPanel.add(uzField);
+        formPanel.add(Box.createVerticalStrut(5));
+
+        JLabel cnLabel = new JLabel("CN:");
+        formPanel.add(cnLabel);
+        cnField = new JTextField(cn != null ? cn : "", 30);
+        formPanel.add(cnField);
+        boolean cnEnabled = configService.isCnProject();
+        cnLabel.setVisible(cnEnabled);
+        cnField.setVisible(cnEnabled);
         
         getContentPane().add(formPanel, BorderLayout.CENTER);
         
@@ -101,6 +111,9 @@ public class EditKeyDialog extends JDialog {
             request.translations.ru = ruField.getText().trim();
             request.translations.en = enField.getText().trim();
             request.translations.uz = uzField.getText().trim();
+            if (configService.isCnProject()) {
+                request.translations.cn = cnField.getText().trim();
+            }
             
             String projectKey = configService.getProjectKey();
             ApiService.CreateKeyResponse response = apiService.updateKey(request, projectKey);
@@ -116,6 +129,7 @@ public class EditKeyDialog extends JDialog {
             translations.put("ru", response.data.translations != null && response.data.translations.ru != null ? response.data.translations.ru : "");
             translations.put("en", response.data.translations != null && response.data.translations.en != null ? response.data.translations.en : "");
             translations.put("uz", response.data.translations != null && response.data.translations.uz != null ? response.data.translations.uz : "");
+            translations.put("cn", response.data.translations != null && response.data.translations.cn != null ? response.data.translations.cn : cnField.getText().trim());
             cacheService.updateKey(response.data.key, translations);
             
             success = true;
@@ -149,6 +163,7 @@ public class EditKeyDialog extends JDialog {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     enField.setText(result.en);
                     uzField.setText(result.uz);
+                    cnField.setText(result.cn);
                     translateButton.setEnabled(true);
                     translateButton.setText("🌐");
                 });

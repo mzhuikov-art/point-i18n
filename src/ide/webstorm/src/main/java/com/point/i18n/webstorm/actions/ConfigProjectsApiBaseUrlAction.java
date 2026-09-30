@@ -11,45 +11,45 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
- * Action for configuring API Base URL.
+ * Action for configuring Projects API Base URL.
  */
-public class ConfigApiBaseUrlAction extends AnAction {
-    
+public class ConfigProjectsApiBaseUrlAction extends AnAction {
+
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         PropertiesComponent props = PropertiesComponent.getInstance();
-        String currentUrl = props.getValue("point.i18n.apiBaseUrl", "");
-        
-        String url = JOptionPane.showInputDialog(
+        String currentUrl = props.getValue("point.i18n.projectsApiBaseUrl", "");
+
+        String url = (String) JOptionPane.showInputDialog(
             null,
-            "Enter API Base URL (for auth, create, update, search):",
-            "Point I18n - Configure API Base URL",
-            JOptionPane.QUESTION_MESSAGE
+            "Enter Projects API Base URL (for project list):",
+            "Point I18n - Configure Projects API Base URL",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            null,
+            currentUrl
         );
-        
+
         if (url == null) {
-            return; // User cancelled
+            return;
         }
-        
+
         url = url.trim();
         if (url.isEmpty()) {
             Messages.showErrorDialog("URL cannot be empty", "Point I18n");
             return;
         }
-        
-        // Validate URL
+
         try {
             new URL(url);
         } catch (MalformedURLException ex) {
             Messages.showErrorDialog("Invalid URL format", "Point I18n");
             return;
         }
-        
-        // Normalize URL (remove trailing slashes)
+
         String normalizedUrl = url.replaceAll("/+$", "");
-        props.setValue("point.i18n.apiBaseUrl", normalizedUrl);
-        
-        Messages.showInfoMessage("API Base URL set: " + normalizedUrl, "Point I18n");
+        props.setValue("point.i18n.projectsApiBaseUrl", normalizedUrl);
+
+        Messages.showInfoMessage("Projects API Base URL set: " + normalizedUrl, "Point I18n");
     }
 }
-

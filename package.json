@@ -2,7 +2,7 @@
   "name": "point-i18n",
   "displayName": "Point I18n",
   "publisher": "maksim-zhuikov",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "repository": {
     "type": "git",
     "url": "https://git.kapitalbank.uz/m.zhuikov/point-i18n"
@@ -61,6 +61,10 @@
         "title": "Point I18n: Configure Localization API Base URL"
       },
       {
+        "command": "i18nRemote.configProjectsApiBaseUrl",
+        "title": "Point I18n: Configure Projects API Base URL"
+      },
+      {
         "command": "i18nRemote.configDeepLApiKey",
         "title": "Point I18n: Configure DeepL API Key"
       }
@@ -94,12 +98,17 @@
         "i18nRemote.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Базовый URL для API (auth, projects, create, update, search)"
+          "description": "Базовый URL для API (auth, create, update, search)"
         },
         "i18nRemote.localizationApiBaseUrl": {
           "type": "string",
           "default": "",
           "description": "Базовый URL для API локализации (fetch locales)"
+        },
+        "i18nRemote.projectsApiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Базовый URL для API проектов (список проектов)"
         },
         "i18nRemote.deepLApiKey": {
           "type": "string",

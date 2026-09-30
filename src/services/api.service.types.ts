@@ -34,6 +34,7 @@ export interface CreateKeyRequest {
         ru: string;
         uz: string;
         en: string;
+        cn?: string;
     };
 }
 
@@ -43,6 +44,7 @@ export interface CreateKeyResponse {
         translations: {
             ru: string;
             uz: string;
+            cn?: string;
             en: string;
         };
     };
@@ -58,6 +60,7 @@ export interface UpdateKeyResponse {
         translations: {
             ru: string;
             uz: string;
+            cn?: string;
             en: string;
         };
     };
@@ -69,6 +72,7 @@ export interface SearchKeysResponse {
         translations: {
             ru: string;
             uz: string;
+            cn?: string;
             en: string;
         };
     }>;
