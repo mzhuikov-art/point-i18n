@@ -1,7 +1,7 @@
 import { ApiService, CacheService } from '../../shared/services';
 import { WebStormStorageService, WebStormConfigService, WebStormEditorService, WebStormWindowService } from './services';
 import { WebStormHoverProvider, WebStormLineMarkerProvider } from './providers';
-import { OpenLoginAction, FetchNowAction, ConfigApiBaseUrlAction, ConfigLocalizationApiBaseUrlAction, ToggleDecorationsAction } from './actions';
+import { OpenLoginAction, FetchNowAction, ConfigApiBaseUrlAction, ConfigLocalizationApiBaseUrlAction, ConfigProjectsApiBaseUrlAction, ToggleDecorationsAction } from './actions';
 import { SidebarToolWindow } from './toolwindow/sidebar-tool-window';
 
 // Глобальные экземпляры для доступа из Actions и Providers
@@ -84,6 +84,10 @@ export function createConfigApiBaseUrlAction(): ConfigApiBaseUrlAction {
 
 export function createConfigLocalizationApiBaseUrlAction(): ConfigLocalizationApiBaseUrlAction {
     return new ConfigLocalizationApiBaseUrlAction(configService, windowService);
+}
+
+export function createConfigProjectsApiBaseUrlAction(): ConfigProjectsApiBaseUrlAction {
+    return new ConfigProjectsApiBaseUrlAction(configService, windowService);
 }
 
 export function createToggleDecorationsAction(): ToggleDecorationsAction {

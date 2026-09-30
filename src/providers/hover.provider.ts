@@ -100,7 +100,8 @@ export class HoverProvider implements vscode.HoverProvider {
         const flags: Record<string, string> = {
             'ru': '🇷🇺',
             'en': '🇬🇧',
-            'uz': '🇺🇿'
+            'uz': '🇺🇿',
+            'cn': '🇨🇳'
         };
         return flags[locale] || '🌐';
     }

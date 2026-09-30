@@ -62,6 +62,27 @@ export class VSCodeConfigService implements IConfigService {
         return normalizeUrl(url);
     }
 
+    async getProjectsApiBaseUrl(): Promise<string> {
+        const config = vscode.workspace.getConfiguration(this.configSection);
+        let url = config.get<string>('projectsApiBaseUrl');
+        if (!url) {
+            const action = await vscode.window.showErrorMessage(
+                'i18nRemote.projectsApiBaseUrl не настроен. Укажите базовый URL для API проектов в настройках расширения.',
+                'Настроить'
+            );
+            if (action === 'Настроить') {
+                await vscode.commands.executeCommand('i18nRemote.configProjectsApiBaseUrl');
+                const newConfig = vscode.workspace.getConfiguration(this.configSection);
+                url = newConfig.get<string>('projectsApiBaseUrl');
+                if (url) {
+                    return normalizeUrl(url);
+                }
+            }
+            throw new Error('i18nRemote.projectsApiBaseUrl не настроен');
+        }
+        return normalizeUrl(url);
+    }
+
     async updateLocale(locale: string): Promise<void> {
         await vscode.workspace.getConfiguration(this.configSection).update(
             'locale',

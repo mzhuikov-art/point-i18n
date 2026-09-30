@@ -11,6 +11,7 @@ export class WebStormConfigService implements IConfigService {
     private readonly SEARCH_PATH_KEY = 'searchPath';
     private readonly API_BASE_URL_KEY = 'apiBaseUrl';
     private readonly LOCALIZATION_API_BASE_URL_KEY = 'localizationApiBaseUrl';
+    private readonly PROJECTS_API_BASE_URL_KEY = 'projectsApiBaseUrl';
 
     private getProperties(): any {
         // @ts-ignore
@@ -75,6 +76,20 @@ export class WebStormConfigService implements IConfigService {
         }
     }
 
+    async getProjectsApiBaseUrl(): Promise<string> {
+        try {
+            const props = this.getProperties();
+            const url = props.getValue(`${this.CONFIG_NAMESPACE}.${this.PROJECTS_API_BASE_URL_KEY}`);
+            if (!url) {
+                throw new Error('i18nRemote.projectsApiBaseUrl не настроен');
+            }
+            return normalizeUrl(url);
+        } catch (error) {
+            console.error('Error getting projects API base URL:', error);
+            throw error;
+        }
+    }
+
     async updateLocale(locale: string): Promise<void> {
         try {
             const props = this.getProperties();
@@ -121,6 +136,16 @@ export class WebStormConfigService implements IConfigService {
             props.setValue(`${this.CONFIG_NAMESPACE}.${this.LOCALIZATION_API_BASE_URL_KEY}`, normalizeUrl(url));
         } catch (error) {
             console.error('Error updating localization API base URL:', error);
+            throw error;
+        }
+    }
+
+    async updateProjectsApiBaseUrl(url: string): Promise<void> {
+        try {
+            const props = this.getProperties();
+            props.setValue(`${this.CONFIG_NAMESPACE}.${this.PROJECTS_API_BASE_URL_KEY}`, normalizeUrl(url));
+        } catch (error) {
+            console.error('Error updating projects API base URL:', error);
             throw error;
         }
     }

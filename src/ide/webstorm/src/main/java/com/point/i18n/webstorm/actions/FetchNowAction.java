@@ -16,7 +16,8 @@ import java.util.List;
  * Action for fetching locales from API and caching them.
  */
 public class FetchNowAction extends AnAction {
-    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz");
+    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz", "cn");
+    private static final List<String> OPTIONAL_LOCALES = Arrays.asList("cn");
     
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
@@ -47,6 +48,9 @@ public class FetchNowAction extends AnAction {
                     cacheService.set(locale, locales);
                 } catch (Exception ex) {
                     System.err.println("Failed to fetch " + locale + ": " + ex.getMessage());
+                    if (OPTIONAL_LOCALES.contains(locale)) {
+                        cacheService.set(locale, new java.util.HashMap<>());
+                    }
                 }
             }
             

@@ -21,6 +21,7 @@ public class CreateKeyDialog extends JDialog {
     private JTextField ruField;
     private JTextField enField;
     private JTextField uzField;
+    private JTextField cnField;
     private JButton translateButton;
     private TranslateService translateService;
     private boolean success = false;
@@ -57,7 +58,7 @@ public class CreateKeyDialog extends JDialog {
         JPanel ruPanel = new JPanel(new BorderLayout(4, 0));
         ruField = new JTextField(30);
         translateButton = new JButton("🌐");
-        translateButton.setToolTipText("Перевести с русского на английский и узбекский");
+        translateButton.setToolTipText("Перевести с русского на английский, узбекский и китайский");
         translateButton.addActionListener(e -> performTranslate());
         ruPanel.add(ruField, BorderLayout.CENTER);
         ruPanel.add(translateButton, BorderLayout.EAST);
@@ -72,6 +73,11 @@ public class CreateKeyDialog extends JDialog {
         formPanel.add(new JLabel("UZ:"));
         uzField = new JTextField(30);
         formPanel.add(uzField);
+        formPanel.add(Box.createVerticalStrut(5));
+
+        formPanel.add(new JLabel("CN (optional):"));
+        cnField = new JTextField(30);
+        formPanel.add(cnField);
         
         getContentPane().add(formPanel, BorderLayout.CENTER);
         
@@ -108,6 +114,7 @@ public class CreateKeyDialog extends JDialog {
             request.translations.ru = ruField.getText().trim();
             request.translations.en = enField.getText().trim();
             request.translations.uz = uzField.getText().trim();
+            request.translations.cn = cnField.getText().trim();
             
             String projectKey = configService.getProjectKey();
             ApiService.CreateKeyResponse response = apiService.createKey(request, projectKey);
@@ -123,6 +130,7 @@ public class CreateKeyDialog extends JDialog {
             translations.put("ru", response.data.translations != null && response.data.translations.ru != null ? response.data.translations.ru : "");
             translations.put("en", response.data.translations != null && response.data.translations.en != null ? response.data.translations.en : "");
             translations.put("uz", response.data.translations != null && response.data.translations.uz != null ? response.data.translations.uz : "");
+            translations.put("cn", response.data.translations != null && response.data.translations.cn != null ? response.data.translations.cn : cnField.getText().trim());
             cacheService.addKey(response.data.key, translations);
             
             success = true;
@@ -156,6 +164,7 @@ public class CreateKeyDialog extends JDialog {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     enField.setText(result.en);
                     uzField.setText(result.uz);
+                    cnField.setText(result.cn);
                     translateButton.setEnabled(true);
                     translateButton.setText("🌐");
                 });

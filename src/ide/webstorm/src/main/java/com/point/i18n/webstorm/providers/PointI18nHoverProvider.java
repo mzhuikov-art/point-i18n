@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class PointI18nHoverProvider extends AbstractDocumentationProvider {
     private static final Logger LOG = Logger.getInstance(PointI18nHoverProvider.class);
-    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz");
+    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz", "cn");
     
     public PointI18nHoverProvider() {
         LOG.info("PointI18nHoverProvider created");
@@ -282,6 +282,7 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
             case "ru": return "🇷🇺";
             case "en": return "🇬🇧";
             case "uz": return "🇺🇿";
+            case "cn": return "🇨🇳";
             default: return "🌐";
         }
     }

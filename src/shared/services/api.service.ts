@@ -29,8 +29,8 @@ export class ApiService {
     }
 
     private async getProjectsUrl(): Promise<string> {
-        const baseUrl = await this.configService.getApiBaseUrl();
-        return `${baseUrl}/api/v1/proxy/localization/api/localization-project?pageSize=100`;
+        const baseUrl = await this.configService.getProjectsApiBaseUrl();
+        return `${baseUrl}/api/v1/localization-project?pageSize=100`;
     }
 
     private async getFetchLocalesUrl(locale: string, projectKey: string): Promise<string> {

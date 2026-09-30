@@ -48,7 +48,10 @@ export class TranslateService {
         const sourceLanguage = 'RU'; // Всегда переводим с русского
 
         // DeepL использует коды языков в верхнем регистре
-        const targetLang = targetLanguage.toUpperCase();
+        const deeplLanguages: Record<string, string> = {
+            cn: 'ZH'
+        };
+        const targetLang = deeplLanguages[targetLanguage.toLowerCase()] || targetLanguage.toUpperCase();
         
         // Проверяем, является ли целевой язык бета-языком
         const isBetaLanguage = this.betaLanguages.includes(targetLang);
@@ -102,25 +105,29 @@ export class TranslateService {
         return data.translations[0].text;
     }
 
-    async translateToEnAndUz(ruText: string): Promise<{ en: string; uz: string }> {
+    async translateToEnAndUz(ruText: string): Promise<{ en: string; uz: string; cn: string }> {
         if (!ruText || !ruText.trim()) {
-            return { en: '', uz: '' };
+            return { en: '', uz: '', cn: '' };
         }
 
         try {
-            // Переводим на английский
             const en = await this.translate(ruText, 'EN');
-            
-            // Переводим на узбекский (бета-язык в DeepL)
+
             let uz = '';
             try {
                 uz = await this.translate(ruText, 'UZ');
             } catch (uzError: any) {
-                // Если перевод на узбекский не удался, оставляем пустую строку
                 console.log('Ошибка перевода на узбекский язык:', uzError.message);
             }
-            
-            return { en, uz };
+
+            let cn = '';
+            try {
+                cn = await this.translate(ruText, 'cn');
+            } catch (cnError: any) {
+                console.log('Ошибка перевода на китайский язык:', cnError.message);
+            }
+
+            return { en, uz, cn };
         } catch (error: any) {
             const errorMessage = error.message || 'Ошибка перевода';
             throw new Error(errorMessage);

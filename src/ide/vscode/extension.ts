@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ApiService, CacheService } from '../../shared/services';
-import { SUPPORTED_LOCALES } from '../../shared/constants';
+import { OPTIONAL_LOCALES, SUPPORTED_LOCALES } from '../../shared/constants';
 import { TranslateService } from '../../services/translate.service';
 import { VSCodeStorageService, VSCodeConfigService, VSCodeEditorService, VSCodeWindowService } from './services';
 import { VSCodeHoverProvider } from './providers/hover.provider';
@@ -197,7 +197,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
             const currentUrl = config.get<string>('apiBaseUrl') || '';
             
             const url = await windowService.showInputBox({
-                prompt: 'Введите базовый URL для API (auth, projects, create, update, search)',
+                prompt: 'Введите базовый URL для API (auth, create, update, search)',
                 value: currentUrl,
                 placeHolder: 'https://example.com',
                 validateInput: (value) => {
@@ -247,6 +247,36 @@ export function activate(ctx: vscode.ExtensionContext): void {
                 const normalizedUrl = url.trim().replace(/\/+$/, '');
                 await config.update('localizationApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
                 windowService.showInformationMessage(`Localization API Base URL установлен: ${normalizedUrl}`);
+            }
+        })
+    );
+
+    ctx.subscriptions.push(
+        vscode.commands.registerCommand('i18nRemote.configProjectsApiBaseUrl', async () => {
+            const config = vscode.workspace.getConfiguration('i18nRemote');
+            const currentUrl = config.get<string>('projectsApiBaseUrl') || '';
+
+            const url = await windowService.showInputBox({
+                prompt: 'Введите базовый URL для API проектов (список проектов)',
+                value: currentUrl,
+                placeHolder: 'https://example.com',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'URL не может быть пустым';
+                    }
+                    try {
+                        new URL(value);
+                        return null;
+                    } catch {
+                        return 'Введите корректный URL';
+                    }
+                }
+            });
+
+            if (url !== undefined) {
+                const normalizedUrl = url.trim().replace(/\/+$/, '');
+                await config.update('projectsApiBaseUrl', normalizedUrl, vscode.ConfigurationTarget.Global);
+                windowService.showInformationMessage(`Projects API Base URL установлен: ${normalizedUrl}`);
             }
         })
     );
@@ -412,6 +442,9 @@ async function fetchLocalesAndCache(
             cacheService.set(locale, locales);
         } catch (error) {
             console.error(`Failed to fetch ${locale}:`, error);
+            if (OPTIONAL_LOCALES.includes(locale)) {
+                cacheService.set(locale, {});
+            }
         }
     });
     

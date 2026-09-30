@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -185,7 +186,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         contentPanel.add(localeLabel);
         contentPanel.add(Box.createVerticalStrut(6));
         
-        localeComboBox = new JComboBox<>(new String[]{"🇷🇺 ru", "🇬🇧 en", "🇺🇿 uz"});
+        localeComboBox = new JComboBox<>(new String[]{"🇷🇺 ru", "🇬🇧 en", "🇺🇿 uz", "🇨🇳 cn"});
         String currentLocale = configService.getLocale();
         localeComboBox.setSelectedItem("🇷🇺 " + currentLocale);
         localeComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -194,7 +195,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         localeComboBox.addActionListener(e -> {
             String selected = (String) localeComboBox.getSelectedItem();
             if (selected != null) {
-                String locale = selected.substring(selected.length() - 2); // Extract "ru", "en", "uz"
+                String locale = selected.substring(selected.length() - 2);
                 configService.setLocale(locale);
                 refreshSearch();
             }
@@ -285,7 +286,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         panel.add(topSection, BorderLayout.NORTH);
         
         // Keys table
-        String[] columnNames = {"Key", "RU", "EN", "UZ"};
+        String[] columnNames = {"Key", "RU", "EN", "UZ", "CN"};
         keysTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -447,7 +448,8 @@ public class PointI18nToolWindowPanel extends JPanel {
     private void loadLocalesIfNeeded() {
         // Проверяем, нужно ли загружать локали
         boolean needLoad = false;
-        List<String> supportedLocales = Arrays.asList("ru", "en", "uz");
+        List<String> supportedLocales = Arrays.asList("ru", "en", "uz", "cn");
+        List<String> optionalLocales = Arrays.asList("cn");
         
         for (String locale : supportedLocales) {
             if (!cacheService.has(locale)) {
@@ -474,6 +476,9 @@ public class PointI18nToolWindowPanel extends JPanel {
                                 cacheService.set(locale, locales);
                             } catch (Exception ex) {
                                 System.err.println("Failed to fetch " + locale + ": " + ex.getMessage());
+                                if (optionalLocales.contains(locale)) {
+                                    cacheService.set(locale, new HashMap<>());
+                                }
                             }
                         }
                     }
@@ -550,12 +555,14 @@ public class PointI18nToolWindowPanel extends JPanel {
         Map<String, String> ruData = cacheService.get("ru");
         Map<String, String> enData = cacheService.get("en");
         Map<String, String> uzData = cacheService.get("uz");
+        Map<String, String> cnData = cacheService.get("cn");
         
         int ruCount = ruData != null ? ruData.size() : 0;
         int enCount = enData != null ? enData.size() : 0;
         int uzCount = uzData != null ? uzData.size() : 0;
+        int cnCount = cnData != null ? cnData.size() : 0;
         
-        statusLabel.setText(String.format("Status: RU: %d, EN: %d, UZ: %d", ruCount, enCount, uzCount));
+        statusLabel.setText(String.format("Status: RU: %d, EN: %d, UZ: %d, CN: %d", ruCount, enCount, uzCount, cnCount));
     }
     
     private void performLogin() {
@@ -637,7 +644,8 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         try {
             String projectKey = configService.getProjectKey();
-            List<String> supportedLocales = Arrays.asList("ru", "en", "uz");
+            List<String> supportedLocales = Arrays.asList("ru", "en", "uz", "cn");
+            List<String> optionalLocales = Arrays.asList("cn");
             
             statusLabel.setText("Status: Fetching locales...");
             
@@ -647,6 +655,9 @@ public class PointI18nToolWindowPanel extends JPanel {
                     cacheService.set(locale, locales);
                 } catch (Exception ex) {
                     System.err.println("Failed to fetch " + locale + ": " + ex.getMessage());
+                    if (optionalLocales.contains(locale)) {
+                        cacheService.set(locale, new HashMap<>());
+                    }
                 }
             }
             
@@ -709,6 +720,7 @@ public class PointI18nToolWindowPanel extends JPanel {
             keyData.translations.ru = result.translations.getOrDefault("ru", "");
             keyData.translations.en = result.translations.getOrDefault("en", "");
             keyData.translations.uz = result.translations.getOrDefault("uz", "");
+            keyData.translations.cn = result.translations.getOrDefault("cn", "");
             currentSearchResults.add(keyData);
         }
         
@@ -728,7 +740,8 @@ public class PointI18nToolWindowPanel extends JPanel {
                 keyData.key,
                 keyData.translations != null ? keyData.translations.ru : "",
                 keyData.translations != null ? keyData.translations.en : "",
-                keyData.translations != null ? keyData.translations.uz : ""
+                keyData.translations != null ? keyData.translations.uz : "",
+                keyData.translations != null ? keyData.translations.cn : ""
             });
         }
         
@@ -757,9 +770,10 @@ public class PointI18nToolWindowPanel extends JPanel {
         String ru = (String) keysTableModel.getValueAt(row, 1);
         String en = (String) keysTableModel.getValueAt(row, 2);
         String uz = (String) keysTableModel.getValueAt(row, 3);
+        String cn = (String) keysTableModel.getValueAt(row, 4);
         
         Window parentWindow = SwingUtilities.getWindowAncestor(this);
-        EditKeyDialog dialog = new EditKeyDialog(parentWindow, key, ru, en, uz, apiService, cacheService, configService, storageService);
+        EditKeyDialog dialog = new EditKeyDialog(parentWindow, key, ru, en, uz, cn, apiService, cacheService, configService, storageService);
         dialog.setVisible(true);
         if (dialog.isSuccess()) {
             refreshSearch();

@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
-export const SUPPORTED_LOCALES = ['ru', 'en', 'uz'];
+export const SUPPORTED_LOCALES = ['ru', 'en', 'uz', 'cn'];
+
+export const OPTIONAL_LOCALES = ['cn'];
 
 function normalizeUrl(url: string): string {
     return url.trim().replace(/\/+$/, '');
@@ -58,9 +60,30 @@ export async function getUserInfoUrl(): Promise<string> {
     return `${baseUrl}/api/v1/proxy/realms/auth/protocol/openid-connect/userinfo`;
 }
 
+async function getProjectsApiBaseUrl(): Promise<string> {
+    let config = vscode.workspace.getConfiguration('i18nRemote');
+    let url = config.get<string>('projectsApiBaseUrl');
+    if (!url) {
+        const action = await vscode.window.showErrorMessage(
+            'i18nRemote.projectsApiBaseUrl не настроен. Укажите базовый URL для API проектов в настройках расширения.',
+            'Настроить'
+        );
+        if (action === 'Настроить') {
+            await vscode.commands.executeCommand('i18nRemote.configProjectsApiBaseUrl');
+            config = vscode.workspace.getConfiguration('i18nRemote');
+            url = config.get<string>('projectsApiBaseUrl');
+            if (url) {
+                return normalizeUrl(url);
+            }
+        }
+        throw new Error('i18nRemote.projectsApiBaseUrl не настроен');
+    }
+    return normalizeUrl(url);
+}
+
 export async function getProjectsUrl(): Promise<string> {
-    const baseUrl = await getApiBaseUrl();
-    return `${baseUrl}/api/v1/proxy/localization/api/localization-project?pageSize=100`;
+    const baseUrl = await getProjectsApiBaseUrl();
+    return `${baseUrl}/api/v1/localization-project?pageSize=100`;
 }
 
 export async function getFetchLocalesUrl(locale: string, projectKey: string): Promise<string> {
