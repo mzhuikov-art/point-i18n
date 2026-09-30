@@ -13,7 +13,6 @@ import com.point.i18n.webstorm.services.StorageService;
 import com.point.i18n.webstorm.utils.I18nKeyParser;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -22,7 +21,9 @@ import java.util.List;
  */
 public class PointI18nHoverProvider extends AbstractDocumentationProvider {
     private static final Logger LOG = Logger.getInstance(PointI18nHoverProvider.class);
-    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz", "cn");
+    private List<String> getLocales() {
+        return getConfigService().getLocales();
+    }
     
     public PointI18nHoverProvider() {
         LOG.info("PointI18nHoverProvider created");
@@ -187,7 +188,7 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
         ConfigService configService = getConfigService();
         String projectKey = configService.getProjectKey();
         
-        for (String locale : SUPPORTED_LOCALES) {
+        for (String locale : getLocales()) {
             if (!cacheService.has(locale)) {
                 try {
                     LOG.info("Loading locale: " + locale + " for project: " + projectKey);
@@ -216,7 +217,7 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
         java.util.Map<String, Boolean> localeStatus = new java.util.HashMap<>();
         boolean hasAnyTranslation = false;
         
-        for (String lang : SUPPORTED_LOCALES) {
+        for (String lang : getLocales()) {
             boolean localeLoaded = cacheService.has(lang);
             localeStatus.put(lang, localeLoaded);
             
@@ -249,7 +250,7 @@ public class PointI18nHoverProvider extends AbstractDocumentationProvider {
         html.append("<th style='padding: 8px 12px; text-align: left; opacity: 0.7;'>Перевод</th>");
         html.append("</tr>");
         
-        for (String lang : SUPPORTED_LOCALES) {
+        for (String lang : getLocales()) {
             String flag = getFlag(lang);
             String translation = translations.get(lang);
             boolean isLocaleLoaded = localeStatus.get(lang);

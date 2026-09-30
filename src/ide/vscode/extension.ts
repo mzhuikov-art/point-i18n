@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ApiService, CacheService } from '../../shared/services';
-import { OPTIONAL_LOCALES, SUPPORTED_LOCALES } from '../../shared/constants';
+import { getLocalesForProject, OPTIONAL_LOCALES } from '../../shared/constants';
 import { TranslateService } from '../../services/translate.service';
 import { VSCodeStorageService, VSCodeConfigService, VSCodeEditorService, VSCodeWindowService } from './services';
 import { VSCodeHoverProvider } from './providers/hover.provider';
@@ -436,7 +436,7 @@ async function fetchLocalesAndCache(
     configService: VSCodeConfigService
 ): Promise<void> {
     const projectKey = configService.getProjectKey();
-    const promises = SUPPORTED_LOCALES.map(async (locale) => {
+    const promises = getLocalesForProject(projectKey).map(async (locale) => {
         try {
             const locales = await apiService.fetchLocales(undefined, locale, projectKey);
             cacheService.set(locale, locales);

@@ -165,6 +165,45 @@ public class PointI18nToolWindowPanel extends JPanel {
         }
     }
     
+    private void updateLocaleCombo() {
+        if (localeComboBox == null) {
+            return;
+        }
+
+        String currentLocale = configService.getLocale();
+        if ("cn".equals(currentLocale) && !configService.isCnProject()) {
+            currentLocale = "ru";
+            configService.setLocale("ru");
+        }
+
+        java.awt.event.ActionListener[] listeners = localeComboBox.getActionListeners();
+        for (java.awt.event.ActionListener listener : listeners) {
+            localeComboBox.removeActionListener(listener);
+        }
+
+        localeComboBox.removeAllItems();
+        localeComboBox.addItem("🇷🇺 ru");
+        localeComboBox.addItem("🇬🇧 en");
+        localeComboBox.addItem("🇺🇿 uz");
+        if (configService.isCnProject()) {
+            localeComboBox.addItem("🇨🇳 cn");
+        }
+
+        String selected = "🇷🇺 ru";
+        if ("en".equals(currentLocale)) {
+            selected = "🇬🇧 en";
+        } else if ("uz".equals(currentLocale)) {
+            selected = "🇺🇿 uz";
+        } else if ("cn".equals(currentLocale)) {
+            selected = "🇨🇳 cn";
+        }
+        localeComboBox.setSelectedItem(selected);
+
+        for (java.awt.event.ActionListener listener : listeners) {
+            localeComboBox.addActionListener(listener);
+        }
+    }
+
     private JPanel createSettingsTab() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
@@ -186,9 +225,8 @@ public class PointI18nToolWindowPanel extends JPanel {
         contentPanel.add(localeLabel);
         contentPanel.add(Box.createVerticalStrut(6));
         
-        localeComboBox = new JComboBox<>(new String[]{"🇷🇺 ru", "🇬🇧 en", "🇺🇿 uz", "🇨🇳 cn"});
-        String currentLocale = configService.getLocale();
-        localeComboBox.setSelectedItem("🇷🇺 " + currentLocale);
+        localeComboBox = new JComboBox<>();
+        updateLocaleCombo();
         localeComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
         localeComboBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         localeComboBox.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
@@ -219,6 +257,10 @@ public class PointI18nToolWindowPanel extends JPanel {
             String projectKey = (String) projectComboBox.getSelectedItem();
             if (projectKey != null && !projectKey.isEmpty()) {
                 configService.setProjectKey(projectKey);
+                if ("cn".equals(configService.getLocale()) && !configService.isCnProject()) {
+                    configService.setLocale("ru");
+                }
+                updateLocaleCombo();
                 statusLabel.setText("📁 Project: " + projectKey);
                 refreshSearch();
             }
@@ -448,7 +490,7 @@ public class PointI18nToolWindowPanel extends JPanel {
     private void loadLocalesIfNeeded() {
         // Проверяем, нужно ли загружать локали
         boolean needLoad = false;
-        List<String> supportedLocales = Arrays.asList("ru", "en", "uz", "cn");
+        List<String> supportedLocales = configService.getLocales();
         List<String> optionalLocales = Arrays.asList("cn");
         
         for (String locale : supportedLocales) {
@@ -644,7 +686,7 @@ public class PointI18nToolWindowPanel extends JPanel {
         
         try {
             String projectKey = configService.getProjectKey();
-            List<String> supportedLocales = Arrays.asList("ru", "en", "uz", "cn");
+            List<String> supportedLocales = configService.getLocales();
             List<String> optionalLocales = Arrays.asList("cn");
             
             statusLabel.setText("Status: Fetching locales...");

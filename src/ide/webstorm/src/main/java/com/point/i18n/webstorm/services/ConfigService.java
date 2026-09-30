@@ -43,8 +43,21 @@ public class ConfigService {
         return normalizeUrl(url);
     }
 
+    public static final String CN_PROJECT_KEY = "b2b-frontend";
+
     public String getProjectKey() {
         return propertiesComponent.getValue(CONFIG_NAMESPACE + ".projectKey", "point-frontend");
+    }
+
+    public boolean isCnProject() {
+        return CN_PROJECT_KEY.equals(getProjectKey());
+    }
+
+    public java.util.List<String> getLocales() {
+        if (isCnProject()) {
+            return java.util.Arrays.asList("ru", "en", "uz", "cn");
+        }
+        return java.util.Arrays.asList("ru", "en", "uz");
     }
     
     public String getLocale() {

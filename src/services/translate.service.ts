@@ -105,7 +105,7 @@ export class TranslateService {
         return data.translations[0].text;
     }
 
-    async translateToEnAndUz(ruText: string): Promise<{ en: string; uz: string; cn: string }> {
+    async translateToEnAndUz(ruText: string, includeCn = false): Promise<{ en: string; uz: string; cn: string }> {
         if (!ruText || !ruText.trim()) {
             return { en: '', uz: '', cn: '' };
         }
@@ -121,10 +121,12 @@ export class TranslateService {
             }
 
             let cn = '';
-            try {
-                cn = await this.translate(ruText, 'cn');
-            } catch (cnError: any) {
-                console.log('Ошибка перевода на китайский язык:', cnError.message);
+            if (includeCn) {
+                try {
+                    cn = await this.translate(ruText, 'cn');
+                } catch (cnError: any) {
+                    console.log('Ошибка перевода на китайский язык:', cnError.message);
+                }
             }
 
             return { en, uz, cn };

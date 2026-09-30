@@ -75,9 +75,13 @@ public class CreateKeyDialog extends JDialog {
         formPanel.add(uzField);
         formPanel.add(Box.createVerticalStrut(5));
 
-        formPanel.add(new JLabel("CN (optional):"));
+        JLabel cnLabel = new JLabel("CN:");
+        formPanel.add(cnLabel);
         cnField = new JTextField(30);
         formPanel.add(cnField);
+        boolean cnEnabled = configService.isCnProject();
+        cnLabel.setVisible(cnEnabled);
+        cnField.setVisible(cnEnabled);
         
         getContentPane().add(formPanel, BorderLayout.CENTER);
         
@@ -114,7 +118,9 @@ public class CreateKeyDialog extends JDialog {
             request.translations.ru = ruField.getText().trim();
             request.translations.en = enField.getText().trim();
             request.translations.uz = uzField.getText().trim();
-            request.translations.cn = cnField.getText().trim();
+            if (configService.isCnProject()) {
+                request.translations.cn = cnField.getText().trim();
+            }
             
             String projectKey = configService.getProjectKey();
             ApiService.CreateKeyResponse response = apiService.createKey(request, projectKey);

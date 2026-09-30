@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ApiService, CacheService } from '../../../shared/services';
 import { IStorageService, IConfigService } from '../../../shared/types';
 import { getI18nKeyInfoAtPosition } from '../../../shared/utils';
-import { SUPPORTED_LOCALES } from '../../../shared/constants';
+import { getLocalesForProject, OPTIONAL_LOCALES } from '../../../shared/constants';
 
 export class VSCodeHoverProvider implements vscode.HoverProvider {
     constructor(
@@ -60,19 +60,22 @@ export class VSCodeHoverProvider implements vscode.HoverProvider {
     }
 
     private async ensureAllLocalesLoaded(): Promise<void> {
-        for (const locale of SUPPORTED_LOCALES) {
+        for (const locale of getLocalesForProject(this.configService.getProjectKey())) {
             if (!this.cacheService.has(locale)) {
                 try {
                     await this.fetchAndCacheLocales(locale);
                 } catch (error) {
                     console.error(`Failed to load ${locale}:`, error);
+                    if (OPTIONAL_LOCALES.includes(locale)) {
+                        this.cacheService.set(locale, {});
+                    }
                 }
             }
         }
     }
 
     private createTranslationTable(key: string): vscode.MarkdownString | undefined {
-        const languages = SUPPORTED_LOCALES;
+        const languages = getLocalesForProject(this.configService.getProjectKey());
         const translations: Record<string, string> = {};
         let hasAnyTranslation = false;
 

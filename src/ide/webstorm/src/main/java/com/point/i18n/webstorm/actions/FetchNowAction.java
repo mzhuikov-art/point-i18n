@@ -16,7 +16,6 @@ import java.util.List;
  * Action for fetching locales from API and caching them.
  */
 public class FetchNowAction extends AnAction {
-    private static final List<String> SUPPORTED_LOCALES = Arrays.asList("ru", "en", "uz", "cn");
     private static final List<String> OPTIONAL_LOCALES = Arrays.asList("cn");
     
     @Override
@@ -42,7 +41,7 @@ public class FetchNowAction extends AnAction {
             
             Messages.showInfoMessage("Fetching locales...", "Point I18n");
             
-            for (String locale : SUPPORTED_LOCALES) {
+            for (String locale : configService.getLocales()) {
                 try {
                     java.util.Map<String, String> locales = apiService.fetchLocales(locale, projectKey);
                     cacheService.set(locale, locales);

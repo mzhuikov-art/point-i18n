@@ -178,10 +178,22 @@ export function getSidebarHtml(): string {
         .hidden {
             display: none;
         }
+
+        body.cn-project .stats {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .cn-only {
+            display: none !important;
+        }
+
+        body.cn-project .cn-only {
+            display: block !important;
+        }
         
         .stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin-bottom: 16px;
         }
@@ -228,9 +240,13 @@ export function getSidebarHtml(): string {
         
         .search-result-translations {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 4px;
             font-size: 11px;
+        }
+
+        body.cn-project .search-result-translations {
+            grid-template-columns: repeat(4, 1fr);
         }
         
         .search-result-translation {
@@ -450,7 +466,7 @@ export function getSidebarHtml(): string {
                     <div class="stat-value" id="statUz">—</div>
                     <div class="stat-label">🇺🇿 UZ</div>
                 </div>
-                <div class="stat">
+                <div class="stat cn-only">
                     <div class="stat-value" id="statCn">—</div>
                     <div class="stat-label">🇨🇳 CN</div>
                 </div>
@@ -472,7 +488,7 @@ export function getSidebarHtml(): string {
                     <option value="ru">🇷🇺 RU</option>
                     <option value="en">🇬🇧 EN</option>
                     <option value="uz">🇺🇿 UZ</option>
-                    <option value="cn">🇨🇳 CN</option>
+                    <option value="cn" id="localeCnOption" hidden>🇨🇳 CN</option>
                 </select>
             </div>
             <div class="setting">
@@ -545,8 +561,8 @@ export function getSidebarHtml(): string {
                 <input id="editKeyEn" type="text" />
                 <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇺🇿 O'zbekcha:</label>
                 <input id="editKeyUz" type="text" />
-                <label style="display: block; margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇨🇳 中文:</label>
-                <input id="editKeyCn" type="text" />
+                <label class="cn-only" style="margin-top: 12px; margin-bottom: 4px; font-size: 12px; opacity: 0.7;">🇨🇳 中文:</label>
+                <input id="editKeyCn" class="cn-only" type="text" />
             </div>
             <div class="modal-footer">
                 <button id="cancelEditBtn" class="secondary">Отмена</button>
@@ -566,7 +582,7 @@ export function getSidebarHtml(): string {
             </div>
             <input id="newKeyEn" type="text" placeholder="🇬🇧 English translation" />
             <input id="newKeyUz" type="text" placeholder="🇺🇿 O'zbekcha tarjima" />
-            <input id="newKeyCn" type="text" placeholder="🇨🇳 中文" />
+            <input id="newKeyCn" class="cn-only" type="text" placeholder="🇨🇳 中文" />
             <button id="createKeyBtn">✨ Создать ключ</button>
             <div id="createKeyStatus" class="status hidden"></div>
         </div>
@@ -663,10 +679,24 @@ export function getSidebarHtml(): string {
             });
         };
         
+        function setCnProject(projectKey) {
+            const enabled = projectKey === 'b2b-frontend';
+            document.body.classList.toggle('cn-project', enabled);
+            const option = document.getElementById('localeCnOption');
+            if (option) {
+                option.hidden = !enabled;
+                option.disabled = !enabled;
+            }
+            if (!enabled && localeSelect.value === 'cn') {
+                localeSelect.value = 'ru';
+            }
+        }
+
         projectSelect.onchange = (e) => {
             const projectKey = e.target.value;
             if (projectKey) {
                 currentProjectKey = projectKey;
+                setCnProject(projectKey);
                 vscode.postMessage({
                     command: 'changeProject',
                     projectKey: projectKey
@@ -854,6 +884,7 @@ export function getSidebarHtml(): string {
                     break;
                 case 'updateProject':
                     currentProjectKey = message.projectKey || '';
+                    setCnProject(currentProjectKey);
                     updateProjectName(message.projectKey, message.projectName);
                     // Устанавливаем значение, если список уже загружен
                     if (currentProjectKey && projectSelect.options.length > 0) {
@@ -993,7 +1024,7 @@ export function getSidebarHtml(): string {
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇷🇺 RU</div>' + escapeHtml(ru || '') + '</div>';
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇬🇧 EN</div>' + escapeHtml(en || '') + '</div>';
                 html += '<div class="search-result-translation"><div class="search-result-translation-label">🇺🇿 UZ</div>' + escapeHtml(uz || '') + '</div>';
-                html += '<div class="search-result-translation"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>';
+                html += '<div class="search-result-translation cn-only"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>';
                 html += '</div></div>';
             }
             
@@ -1064,7 +1095,7 @@ export function getSidebarHtml(): string {
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇷🇺 RU</div>' + escapeHtml(ru || '') + '</div>' +
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇬🇧 EN</div>' + escapeHtml(en || '') + '</div>' +
                 '<div class="search-result-translation"><div class="search-result-translation-label">🇺🇿 UZ</div>' + escapeHtml(uz || '') + '</div>' +
-                '<div class="search-result-translation"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>' +
+                '<div class="search-result-translation cn-only"><div class="search-result-translation-label">🇨🇳 CN</div>' + escapeHtml(cn || '') + '</div>' +
                 '</div></div>';
             
             // Вставляем новый элемент в начало таблицы
